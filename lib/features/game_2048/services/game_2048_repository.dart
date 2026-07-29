@@ -16,6 +16,11 @@ class Game2048Repository {
     return game;
   }
 
+  Future<void> clearSave() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_gameKey);
+  }
+
   Future<void> save(Game2048Model game) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_gameKey, game.encode());

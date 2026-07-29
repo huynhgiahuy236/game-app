@@ -28,3 +28,27 @@ const game2048Metadata = GameMetadata(
   category: 'Puzzle',
   offline: true,
 );
+
+const caroMetadata = GameMetadata(
+  id: 'caro',
+  name: 'Cờ Caro / OX',
+  description: 'Nối 3, 4 hoặc 5 ô liên tiếp — Đấu máy hoặc 2 người.',
+  category: 'Chiến thuật',
+  offline: true,
+);
+
+const minesweeperMetadata = GameMetadata(
+  id: 'minesweeper',
+  name: 'Dò Mìn',
+  description: 'Tính toán vị trí mìn và khám phá toàn bộ ô an toàn.',
+  category: 'Logic',
+  offline: true,
+);
+
+const monopolyMetadata = GameMetadata(
+  id: 'monopoly',
+  name: 'Cờ Tỷ Phú',
+  description: 'Đổ xúc xắc, mua nhà đất Việt Nam & trở thành Tỷ phú!',
+  category: 'Chiến thuật',
+  offline: true,
+);

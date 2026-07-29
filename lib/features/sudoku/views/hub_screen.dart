@@ -5,6 +5,12 @@ import '../../game_2048/views/game_2048_screen.dart';
 import '../models/sudoku_models.dart';
 import '../services/sudoku_repository.dart';
 import 'sudoku_game_screen.dart';
+import '../../caro/services/caro_repository.dart';
+import '../../caro/views/caro_game_screen.dart';
+import '../../minesweeper/services/minesweeper_repository.dart';
+import '../../minesweeper/views/minesweeper_game_screen.dart';
+import '../../monopoly/services/monopoly_repository.dart';
+import '../../monopoly/views/monopoly_game_screen.dart';
 
 /// Trang chủ ─ điều hướng 3 tab: Trò chơi / Thành tích / Cài đặt.
 class HubScreen extends StatefulWidget {
@@ -12,10 +18,16 @@ class HubScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.game2048Repository,
+    required this.caroRepository,
+    required this.minesweeperRepository,
+    required this.monopolyRepository,
     required this.onThemeChanged,
   });
   final SudokuRepository repository;
   final Game2048Repository game2048Repository;
+  final CaroRepository caroRepository;
+  final MinesweeperRepository minesweeperRepository;
+  final MonopolyRepository monopolyRepository;
   final ValueChanged<ThemeMode> onThemeChanged;
 
   @override
@@ -96,6 +108,36 @@ class _HubScreenState extends State<HubScreen> {
             MaterialPageRoute(
               builder: (_) =>
                   Game2048Screen(repository: widget.game2048Repository),
+            ),
+          );
+          _load();
+        },
+        onPlayCaro: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  CaroGameScreen(repository: widget.caroRepository),
+            ),
+          );
+          _load();
+        },
+        onPlayMinesweeper: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  MinesweeperGameScreen(repository: widget.minesweeperRepository),
+            ),
+          );
+          _load();
+        },
+        onPlayMonopoly: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  MonopolyGameScreen(repository: widget.monopolyRepository),
             ),
           );
           _load();
@@ -234,6 +276,9 @@ class _GamesTab extends StatelessWidget {
     required this.onSudokuNew,
     required this.onSudokuContinue,
     required this.onPlay2048,
+    required this.onPlayCaro,
+    required this.onPlayMinesweeper,
+    required this.onPlayMonopoly,
   });
 
   final bool loading;
@@ -242,6 +287,9 @@ class _GamesTab extends StatelessWidget {
   final VoidCallback onSudokuNew;
   final VoidCallback? onSudokuContinue;
   final VoidCallback onPlay2048;
+  final VoidCallback onPlayCaro;
+  final VoidCallback onPlayMinesweeper;
+  final VoidCallback onPlayMonopoly;
 
   @override
   Widget build(BuildContext context) {
@@ -271,8 +319,225 @@ class _GamesTab extends StatelessWidget {
             bestScore: best2048,
             onPlay: onPlay2048,
           ),
+          const SizedBox(height: 12),
+          _CaroGameCard(
+            onPlay: onPlayCaro,
+          ),
+          const SizedBox(height: 12),
+          _MinesweeperGameCard(
+            onPlay: onPlayMinesweeper,
+          ),
+          const SizedBox(height: 12),
+          _MonopolyGameCard(
+            onPlay: onPlayMonopoly,
+          ),
         ],
       ],
+    );
+  }
+}
+
+class _MonopolyGameCard extends StatelessWidget {
+  const _MonopolyGameCard({required this.onPlay});
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onPlay,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colors.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.casino_rounded,
+                    color: colors.onTertiaryContainer,
+                    size: 26,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      monopolyMetadata.name,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      monopolyMetadata.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: onPlay,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: const Text('Chơi'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MinesweeperGameCard extends StatelessWidget {
+  const _MinesweeperGameCard({required this.onPlay});
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onPlay,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colors.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.dangerous_rounded,
+                    color: colors.onErrorContainer,
+                    size: 26,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      minesweeperMetadata.name,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      minesweeperMetadata.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: onPlay,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: const Text('Chơi'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CaroGameCard extends StatelessWidget {
+  const _CaroGameCard({required this.onPlay});
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onPlay,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const _GameImageBadge(
+                assetPath: 'assets/logo_game/ox.jpg',
+                background: null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      caroMetadata.name,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      caroMetadata.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: onPlay,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: const Text('Chơi'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -466,6 +731,94 @@ class _StatsTab extends StatelessWidget {
   final int best2048;
   final List<int> scoreHistory;
 
+  void _showSudokuDetail(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Thành tích Sudoku',
+              style: Theme.of(context).textTheme.headlineMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            _SudokuOverviewCard(stats: stats),
+            const SizedBox(height: 12),
+            _SudokuDifficultyChart(stats: stats),
+            const SizedBox(height: 12),
+            _SudokuBestTimesChart(stats: stats),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _show2048Detail(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.9,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (context, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Thành tích 2048',
+              style: Theme.of(context).textTheme.headlineMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            _Game2048OverviewCard(best: best2048),
+            const SizedBox(height: 12),
+            _Game2048ScoreChart(history: scoreHistory),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -473,23 +826,95 @@ class _StatsTab extends StatelessWidget {
       children: [
         const SizedBox(
           height: 64,
-          child: AppBrandHeader(subtitle: 'Theo dõi hành trình chơi'),
+          child: AppBrandHeader(subtitle: 'Theo dõi thành tích các trò chơi'),
         ),
-        const SizedBox(height: 28),
-        _SectionLabel('Sudoku'),
-        const SizedBox(height: 12),
-        _SudokuOverviewCard(stats: stats),
-        const SizedBox(height: 12),
-        _SudokuDifficultyChart(stats: stats),
-        const SizedBox(height: 12),
-        _SudokuBestTimesChart(stats: stats),
         const SizedBox(height: 24),
-        _SectionLabel('2048'),
+        _SectionLabel('Danh sách trò chơi'),
         const SizedBox(height: 12),
-        _Game2048OverviewCard(best: best2048),
+
+        // ── Card Thành tích Sudoku ──────────────────────────────────
+        _StatsGameCard(
+          title: 'Sudoku',
+          subtitle: 'Thắng ${stats.completed} ván • Tỉ lệ ${(stats.started == 0 ? 0 : (stats.completed * 100 / stats.started)).round()}%',
+          assetPath: 'assets/logo_game/sudoku.png',
+          onTap: () => _showSudokuDetail(context),
+        ),
         const SizedBox(height: 12),
-        _Game2048ScoreChart(history: scoreHistory),
+
+        // ── Card Thành tích 2048 ─────────────────────────────────────
+        _StatsGameCard(
+          title: '2048',
+          subtitle: 'Kỷ lục: $best2048 điểm',
+          assetPath: 'assets/logo_game/2048.jpg',
+          onTap: () => _show2048Detail(context),
+        ),
       ],
+    );
+  }
+}
+
+class _StatsGameCard extends StatelessWidget {
+  const _StatsGameCard({
+    required this.title,
+    required this.subtitle,
+    required this.assetPath,
+    required this.onTap,
+  });
+  final String title;
+  final String subtitle;
+  final String assetPath;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _GameImageBadge(assetPath: assetPath),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: onTap,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: const Text('Chi tiết'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

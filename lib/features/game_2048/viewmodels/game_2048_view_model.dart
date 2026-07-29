@@ -22,7 +22,11 @@ class Game2048ViewModel extends ChangeNotifier {
     bool resume = true,
     Random? random,
   }) async {
-    final saved = resume ? await repository.load() : null;
+    var saved = resume ? await repository.load() : null;
+    if (saved != null && saved.board.every((v) => v == 0)) {
+      saved = null;
+      await repository.clearSave();
+    }
     final game =
         saved ??
         Game2048Model(
@@ -30,9 +34,11 @@ class Game2048ViewModel extends ChangeNotifier {
           bestScore: await repository.bestScore(),
         );
     final viewModel = Game2048ViewModel(repository, game, random: random);
-    if (saved == null) {
-      viewModel._addTile();
-      viewModel._addTile();
+    final nonZeroTiles = game.board.where((v) => v > 0).length;
+    if (nonZeroTiles < 2) {
+      for (var i = 0; i < 2 - nonZeroTiles; i++) {
+        viewModel._addTile();
+      }
       await repository.save(game);
     }
     return viewModel;
