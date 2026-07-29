@@ -77,6 +77,8 @@ flutter:
     - assets/logo_game/sudoku.png
     - assets/logo_game/2048.jpg
     - assets/logo_game/ox.jpg
+    - assets/logo_game/do-min.png
+    - assets/logo_game/co ty phu.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

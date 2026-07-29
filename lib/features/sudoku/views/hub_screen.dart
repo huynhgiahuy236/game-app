@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/games/game_metadata.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../game_2048/services/game_2048_repository.dart';
 import '../../game_2048/views/game_2048_screen.dart';
 import '../models/sudoku_models.dart';
@@ -12,7 +14,10 @@ import '../../minesweeper/views/minesweeper_game_screen.dart';
 import '../../monopoly/services/monopoly_repository.dart';
 import '../../monopoly/views/monopoly_game_screen.dart';
 
-/// Trang chủ ─ điều hướng 3 tab: Trò chơi / Thành tích / Cài đặt.
+// ═══════════════════════════════════════════════════════════════════════════
+//  HubScreen — root nav (3 tabs)
+// ═══════════════════════════════════════════════════════════════════════════
+
 class HubScreen extends StatefulWidget {
   const HubScreen({
     super.key,
@@ -34,18 +39,30 @@ class HubScreen extends StatefulWidget {
   State<HubScreen> createState() => _HubScreenState();
 }
 
-class _HubScreenState extends State<HubScreen> {
+class _HubScreenState extends State<HubScreen>
+    with SingleTickerProviderStateMixin {
   SudokuGame? saved;
   SudokuStats stats = SudokuStats();
   int best2048 = 0;
   List<int> scoreHistory2048 = const [];
   bool loading = true;
   int selectedTab = 0;
+  late final AnimationController _navAnimCtrl;
 
   @override
   void initState() {
     super.initState();
+    _navAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _navAnimCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -55,7 +72,8 @@ class _HubScreenState extends State<HubScreen> {
     scoreHistory2048 = await widget.game2048Repository.scoreHistory();
     if (mounted) setState(() => loading = false);
     if (!await widget.repository.tutorialSeen() && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _showTutorial());
     }
   }
 
@@ -75,13 +93,15 @@ class _HubScreenState extends State<HubScreen> {
       builder: (context) => const _DifficultySheet(),
     );
     if (difficulty != null && mounted) {
-      await SudokuGameScreen.startNew(context, widget.repository, difficulty);
+      await SudokuGameScreen.startNew(
+          context, widget.repository, difficulty);
       _load();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pages = <Widget>[
       _GamesTab(
         loading: loading,
@@ -126,8 +146,8 @@ class _HubScreenState extends State<HubScreen> {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  MinesweeperGameScreen(repository: widget.minesweeperRepository),
+              builder: (_) => MinesweeperGameScreen(
+                  repository: widget.minesweeperRepository),
             ),
           );
           _load();
@@ -136,8 +156,8 @@ class _HubScreenState extends State<HubScreen> {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  MonopolyGameScreen(repository: widget.monopolyRepository),
+              builder: (_) => MonopolyGameScreen(
+                  repository: widget.monopolyRepository),
             ),
           );
           _load();
@@ -155,120 +175,183 @@ class _HubScreenState extends State<HubScreen> {
     ];
 
     return Scaffold(
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 320),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.04, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          ),
-          child: KeyedSubtree(
-            key: ValueKey(selectedTab),
-            child: pages[selectedTab],
+      extendBody: true,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.03, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
           ),
         ),
+        child: KeyedSubtree(
+          key: ValueKey(selectedTab),
+          child: pages[selectedTab],
+        ),
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: _PremiumNavBar(
         selectedIndex: selectedTab,
-        onDestinationSelected: (i) => setState(() => selectedTab = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.sports_esports_outlined),
-            selectedIcon: Icon(Icons.sports_esports_rounded),
-            label: 'Trò chơi',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events_rounded),
-            label: 'Thành tích',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tune_rounded),
-            selectedIcon: Icon(Icons.tune_rounded),
-            label: 'Cài đặt',
-          ),
-        ],
+        isDark: isDark,
+        onChanged: (i) => setState(() => selectedTab = i),
       ),
     );
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-//  App brand header (logo + tên) ─ dùng chung mọi tab
-// ───────────────────────────────────────────────────────────────────────────
+// ─── Premium Navigation Bar ──────────────────────────────────────────────────
 
-class AppBrandHeader extends StatelessWidget {
-  const AppBrandHeader({super.key, required this.subtitle, this.compact = false});
-  final String subtitle;
-  final bool compact;
+class _PremiumNavBar extends StatelessWidget {
+  const _PremiumNavBar({
+    required this.selectedIndex,
+    required this.isDark,
+    required this.onChanged,
+  });
+  final int selectedIndex;
+  final bool isDark;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final size = compact ? 44.0 : 52.0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: colors.primaryContainer,
-              borderRadius: BorderRadius.circular(size * 0.28),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(size * 0.28),
-              child: Image.asset(
-                'assets/logo.jpg',
-                fit: BoxFit.cover,
-                width: size,
-                height: size,
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF0D1326).withValues(alpha: 0.95)
+            : colors.surfaceContainerLow,
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? colors.primary.withValues(alpha: 0.15)
+                : colors.outlineVariant,
+            width: 1,
+          ),
+        ),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, -4),
+                ),
+              ]
+            : [],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              _NavItem(
+                icon: Icons.sports_esports_outlined,
+                activeIcon: Icons.sports_esports_rounded,
+                label: 'Trò chơi',
+                selected: selectedIndex == 0,
+                onTap: () => onChanged(0),
               ),
-            ),
+              _NavItem(
+                icon: Icons.emoji_events_outlined,
+                activeIcon: Icons.emoji_events_rounded,
+                label: 'Thành tích',
+                selected: selectedIndex == 1,
+                onTap: () => onChanged(1),
+              ),
+              _NavItem(
+                icon: Icons.tune_outlined,
+                activeIcon: Icons.tune_rounded,
+                label: 'Cài đặt',
+                selected: selectedIndex == 2,
+                onTap: () => onChanged(2),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Chị Mười',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.onSurfaceVariant,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-//  TAB 1 ─ TRÒ CHƠI
-// ───────────────────────────────────────────────────────────────────────────
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
-class _GamesTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                width: selected ? 48 : 0,
+                height: selected ? 30 : 0,
+                decoration: selected
+                    ? BoxDecoration(
+                        color: colors.primaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      )
+                    : null,
+                child: Icon(
+                  selected ? activeIcon : icon,
+                  size: 20,
+                  color: selected
+                      ? colors.primary
+                      : colors.onSurfaceVariant,
+                ),
+              ),
+              if (!selected) ...[
+                Icon(icon, size: 22, color: colors.onSurfaceVariant),
+                const SizedBox(height: 2),
+              ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight:
+                      selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected
+                      ? colors.primary
+                      : colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TAB 1 — TRÒ CHƠI  (full redesign)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _GamesTab extends StatefulWidget {
   const _GamesTab({
     required this.loading,
     required this.saved,
@@ -280,7 +363,6 @@ class _GamesTab extends StatelessWidget {
     required this.onPlayMinesweeper,
     required this.onPlayMonopoly,
   });
-
   final bool loading;
   final SudokuGame? saved;
   final int best2048;
@@ -292,434 +374,864 @@ class _GamesTab extends StatelessWidget {
   final VoidCallback onPlayMonopoly;
 
   @override
+  State<_GamesTab> createState() => _GamesTabState();
+}
+
+class _GamesTabState extends State<_GamesTab>
+    with SingleTickerProviderStateMixin {
+  int selectedCategory = 0;
+  late final AnimationController _staggerCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _staggerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _staggerCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      children: [
-        const SizedBox(
-          height: 64,
-          child: AppBrandHeader(subtitle: 'Chọn một trò và bắt đầu'),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return CustomScrollView(
+      slivers: [
+        // ── Fancy header ──────────────────────────────────────
+        SliverToBoxAdapter(
+          child: _HeroHeader(isDark: isDark),
         ),
-        const SizedBox(height: 28),
-        if (loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 56),
+
+        // ── Stats strip ───────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _StatsStrip(best2048: widget.best2048),
+          ),
+        ),
+
+        // ── Category chips ────────────────────────────────────
+        SliverToBoxAdapter(
+          child: _CategoryRow(
+            selected: selectedCategory,
+            onChanged: (i) => setState(() => selectedCategory = i),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+        // ── Game cards ────────────────────────────────────────
+        if (widget.loading)
+          const SliverFillRemaining(
+            hasScrollBody: false,
             child: Center(child: CircularProgressIndicator()),
           )
-        else ...[
-          _SectionLabel('Game của bạn'),
-          const SizedBox(height: 12),
-          _SudokuGameCard(
-            hasSaved: saved != null,
-            onNew: onSudokuNew,
-            onContinue: onSudokuContinue,
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+            sliver: SliverList.separated(
+              separatorBuilder: (ctx, sep) => const SizedBox(height: 12),
+              itemCount: _visibleCards(selectedCategory).length,
+              itemBuilder: (context, i) {
+                final cards = _visibleCards(selectedCategory);
+                return _StaggeredCard(
+                  index: i,
+                  controller: _staggerCtrl,
+                  child: cards[i],
+                );
+              },
+            ),
           ),
-          const SizedBox(height: 12),
-          _Game2048Card(
-            bestScore: best2048,
-            onPlay: onPlay2048,
-          ),
-          const SizedBox(height: 12),
-          _CaroGameCard(
-            onPlay: onPlayCaro,
-          ),
-          const SizedBox(height: 12),
-          _MinesweeperGameCard(
-            onPlay: onPlayMinesweeper,
-          ),
-          const SizedBox(height: 12),
-          _MonopolyGameCard(
-            onPlay: onPlayMonopoly,
-          ),
-        ],
       ],
     );
   }
-}
 
-class _MonopolyGameCard extends StatelessWidget {
-  const _MonopolyGameCard({required this.onPlay});
-  final VoidCallback onPlay;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onPlay,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colors.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.casino_rounded,
-                    color: colors.onTertiaryContainer,
-                    size: 26,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      monopolyMetadata.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      monopolyMetadata.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: onPlay,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: const Text('Chơi'),
-              ),
-            ],
-          ),
+  List<Widget> _visibleCards(int cat) {
+    final all = <Widget>[
+      if (cat == 0 || cat == 1) ...[
+        _GameCard(
+          assetPath: 'assets/logo_game/sudoku.png',
+          name: sudokuMetadata.name,
+          description: widget.saved != null
+              ? 'Có ván đang chơi dở'
+              : sudokuMetadata.description,
+          tag: 'Logic',
+          tagColor: const Color(0xFF7C3AED),
+          gradient: AppGradients.violetCyan,
+          onPlay: widget.saved != null
+              ? widget.onSudokuContinue!
+              : widget.onSudokuNew,
+          playLabel: widget.saved != null ? 'Tiếp tục' : 'Chơi',
+          isHot: false,
         ),
-      ),
-    );
+        _GameCard(
+          assetPath: 'assets/logo_game/2048.jpg',
+          name: game2048Metadata.name,
+          description: widget.best2048 > 0
+              ? 'Kỷ lục: ${widget.best2048} điểm'
+              : game2048Metadata.description,
+          tag: 'Logic',
+          tagColor: const Color(0xFF7C3AED),
+          gradient: AppGradients.goldAmber,
+          onPlay: widget.onPlay2048,
+          playLabel: 'Chơi',
+          isHot: true,
+        ),
+        _GameCard(
+          assetPath: 'assets/logo_game/do-min.png',
+          name: minesweeperMetadata.name,
+          description: minesweeperMetadata.description,
+          tag: 'Logic',
+          tagColor: const Color(0xFF7C3AED),
+          gradient: AppGradients.emeraldTeal,
+          onPlay: widget.onPlayMinesweeper,
+          playLabel: 'Chơi',
+          isHot: false,
+        ),
+      ],
+      if (cat == 0 || cat == 2) ...[
+        _GameCard(
+          assetPath: 'assets/logo_game/ox.jpg',
+          name: caroMetadata.name,
+          description: caroMetadata.description,
+          tag: 'Chiến thuật',
+          tagColor: const Color(0xFF0891B2),
+          gradient: AppGradients.roseGold,
+          onPlay: widget.onPlayCaro,
+          playLabel: 'Chơi',
+          isHot: false,
+        ),
+        _GameCard(
+          assetPath: 'assets/logo_game/co ty phu.jpg',
+          name: monopolyMetadata.name,
+          description: monopolyMetadata.description,
+          tag: 'Chiến thuật',
+          tagColor: const Color(0xFF0891B2),
+          gradient: AppGradients.goldAmber,
+          onPlay: widget.onPlayMonopoly,
+          playLabel: 'Chơi',
+          isHot: true,
+        ),
+      ],
+    ];
+    return all;
   }
 }
 
-class _MinesweeperGameCard extends StatelessWidget {
-  const _MinesweeperGameCard({required this.onPlay});
-  final VoidCallback onPlay;
+// ─── Hero Header ─────────────────────────────────────────────────────────────
+
+class _HeroHeader extends StatefulWidget {
+  const _HeroHeader({required this.isDark});
+  final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onPlay,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colors.errorContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.dangerous_rounded,
-                    color: colors.onErrorContainer,
-                    size: 26,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      minesweeperMetadata.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      minesweeperMetadata.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: onPlay,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: const Text('Chơi'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  State<_HeroHeader> createState() => _HeroHeaderState();
+}
+
+class _HeroHeaderState extends State<_HeroHeader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmer;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
   }
-}
-
-class _CaroGameCard extends StatelessWidget {
-  const _CaroGameCard({required this.onPlay});
-  final VoidCallback onPlay;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onPlay,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const _GameImageBadge(
-                assetPath: 'assets/logo_game/ox.jpg',
-                background: null,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      caroMetadata.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      caroMetadata.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: onPlay,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: const Text('Chơi'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _shimmer.dispose();
+    super.dispose();
   }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(left: 4),
-    child: Text(
-      text.toUpperCase(),
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-        letterSpacing: 1.2,
-      ),
-    ),
-  );
-}
-
-class _SudokuGameCard extends StatelessWidget {
-  const _SudokuGameCard({
-    required this.hasSaved,
-    required this.onNew,
-    this.onContinue,
-  });
-  final bool hasSaved;
-  final VoidCallback onNew;
-  final VoidCallback? onContinue;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: hasSaved ? onContinue : onNew,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const _GameImageBadge(
-                assetPath: 'assets/logo_game/sudoku.png',
-                background: null,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      sudokuMetadata.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      hasSaved ? 'Có ván đang chơi dở' : sudokuMetadata.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: hasSaved ? onContinue : onNew,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: Text(hasSaved ? 'Tiếp tục' : 'Chơi'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Game2048Card extends StatelessWidget {
-  const _Game2048Card({required this.bestScore, required this.onPlay});
-  final int bestScore;
-  final VoidCallback onPlay;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onPlay,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const _GameImageBadge(
-                assetPath: 'assets/logo_game/2048.jpg',
-                background: null,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      game2048Metadata.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      bestScore > 0
-                          ? 'Kỷ lục: $bestScore'
-                          : game2048Metadata.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: onPlay,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: const Text('Chơi'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GameImageBadge extends StatelessWidget {
-  const _GameImageBadge({
-    required this.assetPath,
-    this.background,
-  });
-  final String assetPath;
-  final Color? background;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = widget.isDark;
     return Container(
-      width: 56,
-      height: 56,
-      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.fromLTRB(16, 52, 16, 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: background ?? colors.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(24),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF1C1038), Color(0xFF0D1326)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFEDE9FE), Color(0xFFCFF1FA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF7C3AED).withValues(alpha: 0.3)
+              : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+          width: 1,
+        ),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                  blurRadius: 30,
+                  spreadRadius: -5,
+                ),
+              ]
+            : [],
       ),
-      child: Image.asset(
-        assetPath,
-        fit: BoxFit.cover,
+      child: Row(
+        children: [
+          // Logo with glow
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/logo.jpg',
+                fit: BoxFit.cover,
+                width: 56,
+                height: 56,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedBuilder(
+                  animation: _shimmer,
+                  builder: (context, _) {
+                    return ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (bounds) {
+                        return LinearGradient(
+                          colors: isDark
+                              ? [
+                                  const Color(0xFFA78BFA),
+                                  const Color(0xFF22D3EE),
+                                  const Color(0xFFA78BFA),
+                                ]
+                              : [
+                                  const Color(0xFF6D28D9),
+                                  const Color(0xFF0891B2),
+                                  const Color(0xFF6D28D9),
+                                ],
+                          stops: [
+                            (_shimmer.value - 0.3).clamp(0.0, 1.0),
+                            _shimmer.value.clamp(0.0, 1.0),
+                            (_shimmer.value + 0.3).clamp(0.0, 1.0),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(bounds);
+                      },
+                      child: const Text(
+                        'Chị Mười',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                          height: 1.1,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Bộ sưu tập game trí tuệ đỉnh cao ✨',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? const Color(0xFF9B9EC8)
+                        : const Color(0xFF4B5478),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Star burst decoration
+          _PulsingDot(isDark: isDark),
+        ],
       ),
     );
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-//  TAB 2 ─ THÀNH TÍCH (dạng biểu đồ)
-// ───────────────────────────────────────────────────────────────────────────
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot({required this.isDark});
+  final bool isDark;
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        return Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF22D3EE),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF22D3EE).withValues(alpha: _ctrl.value * 0.6 + 0.2),
+                blurRadius: _ctrl.value * 12 + 4,
+                spreadRadius: _ctrl.value * 2,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─── Stats Strip ─────────────────────────────────────────────────────────────
+
+class _StatsStrip extends StatelessWidget {
+  const _StatsStrip({required this.best2048});
+  final int best2048;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: isDark
+            ? const Color(0xFF141B2D)
+            : colors.surfaceContainerLow,
+        border: Border.all(
+          color: isDark
+              ? colors.primary.withValues(alpha: 0.12)
+              : colors.outlineVariant,
+        ),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            _StatPill(
+              icon: Icons.sports_esports_rounded,
+              label: '5 Game',
+              color: const Color(0xFF7C3AED),
+            ),
+            VerticalDivider(
+              width: 24,
+              thickness: 1,
+              color: isDark
+                  ? colors.outlineVariant
+                  : colors.outlineVariant,
+            ),
+            _StatPill(
+              icon: Icons.star_rounded,
+              label: '2048: $best2048',
+              color: const Color(0xFFF59E0B),
+            ),
+            VerticalDivider(
+              width: 24,
+              thickness: 1,
+              color: colors.outlineVariant,
+            ),
+            _StatPill(
+              icon: Icons.wifi_off_rounded,
+              label: 'Offline',
+              color: const Color(0xFF10B981),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Category Row ─────────────────────────────────────────────────────────────
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({required this.selected, required this.onChanged});
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          _CatChip(label: '✨ Tất cả', active: selected == 0,
+              onTap: () => onChanged(0)),
+          const SizedBox(width: 8),
+          _CatChip(label: '🧩 Logic', active: selected == 1,
+              onTap: () => onChanged(1)),
+          const SizedBox(width: 8),
+          _CatChip(label: '⚔️ Chiến thuật', active: selected == 2,
+              onTap: () => onChanged(2)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CatChip extends StatelessWidget {
+  const _CatChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: active
+              ? (isDark
+                  ? const Color(0xFF3B1F6E)
+                  : colors.primaryContainer)
+              : (isDark
+                  ? const Color(0xFF141B2D)
+                  : colors.surfaceContainerLow),
+          border: Border.all(
+            color: active
+                ? (isDark
+                    ? const Color(0xFF7C3AED)
+                    : colors.primary)
+                : colors.outlineVariant,
+            width: active ? 1.5 : 1,
+          ),
+          boxShadow: active && isDark
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                  ),
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: active
+                ? (isDark ? const Color(0xFFA78BFA) : colors.primary)
+                : colors.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Game Card ───────────────────────────────────────────────────────────────
+
+class _GameCard extends StatefulWidget {
+  const _GameCard({
+    required this.assetPath,
+    required this.name,
+    required this.description,
+    required this.tag,
+    required this.tagColor,
+    required this.gradient,
+    required this.onPlay,
+    required this.playLabel,
+    required this.isHot,
+  });
+
+  final String assetPath;
+  final String name;
+  final String description;
+  final String tag;
+  final Color tagColor;
+  final Gradient gradient;
+  final VoidCallback onPlay;
+  final String playLabel;
+  final bool isHot;
+
+  @override
+  State<_GameCard> createState() => _GameCardState();
+}
+
+class _GameCardState extends State<_GameCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressCtrl;
+  bool _pressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      lowerBound: 0.97,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) {
+    _pressed = true;
+    _pressCtrl.reverse();
+  }
+
+  void _onTapUp(TapUpDetails _) {
+    _release();
+    widget.onPlay();
+  }
+
+  void _onTapCancel() => _release();
+
+  void _release() {
+    if (_pressed) {
+      _pressed = false;
+      _pressCtrl.forward();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+
+    return AnimatedBuilder(
+      animation: _pressCtrl,
+      builder: (context, child) => Transform.scale(
+        scale: _pressCtrl.value,
+        child: child,
+      ),
+      child: GestureDetector(
+        onTapDown: _onTapDown,
+        onTapUp: _onTapUp,
+        onTapCancel: _onTapCancel,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: isDark
+                ? const Color(0xFF141B2D)
+                : colors.surfaceContainerLow,
+            border: Border.all(
+              color: isDark
+                  ? colors.primary.withValues(alpha: 0.12)
+                  : colors.outlineVariant,
+            ),
+            boxShadow: isDark
+                ? [
+                    BoxShadow(
+                      color: widget.tagColor.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+          ),
+          child: Row(
+            children: [
+              // Image with gradient side accent
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(19),
+                      bottomLeft: Radius.circular(19),
+                    ),
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        gradient: widget.gradient,
+                      ),
+                      child: Image.asset(
+                        widget.assetPath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, st) => const Icon(
+                          Icons.games_rounded,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // HOT badge
+                  if (widget.isHot)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          '🔥 HOT',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Tag chip
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: widget.tagColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          widget.tag,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: widget.tagColor,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        widget.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        widget.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Play button
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: _GradientPlayButton(
+                  label: widget.playLabel,
+                  gradient: widget.gradient,
+                  onTap: widget.onPlay,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GradientPlayButton extends StatelessWidget {
+  const _GradientPlayButton({
+    required this.label,
+    required this.gradient,
+    required this.onTap,
+  });
+  final String label;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: (gradient as LinearGradient)
+                  .colors
+                  .first
+                  .withValues(alpha: 0.35),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Staggered Card Animation ─────────────────────────────────────────────────
+
+class _StaggeredCard extends StatelessWidget {
+  const _StaggeredCard({
+    required this.index,
+    required this.controller,
+    required this.child,
+  });
+  final int index;
+  final AnimationController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = (index * 0.1).clamp(0.0, 0.6);
+    final end = (start + 0.4).clamp(0.0, 1.0);
+    final animation = CurvedAnimation(
+      parent: controller,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) => Opacity(
+        opacity: animation.value,
+        child: Transform.translate(
+          offset: Offset(0, 24 * (1 - animation.value)),
+          child: child,
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TAB 2 — THÀNH TÍCH
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _StatsTab extends StatelessWidget {
   const _StatsTab({
@@ -737,33 +1249,22 @@ class _StatsTab extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.85,
         maxChildSize: 0.95,
         minChildSize: 0.5,
         expand: false,
-        builder: (context, scrollController) => ListView(
-          controller: scrollController,
+        builder: (context, sc) => ListView(
+          controller: sc,
           padding: const EdgeInsets.all(20),
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            _DragHandle(),
             const SizedBox(height: 16),
-            Text(
-              'Thành tích Sudoku',
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
+            Text('Thành tích Sudoku',
+                style: Theme.of(context).textTheme.headlineMedium,
+                textAlign: TextAlign.center),
             const SizedBox(height: 20),
             _SudokuOverviewCard(stats: stats),
             const SizedBox(height: 12),
@@ -782,33 +1283,22 @@ class _StatsTab extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.75,
         maxChildSize: 0.9,
         minChildSize: 0.4,
         expand: false,
-        builder: (context, scrollController) => ListView(
-          controller: scrollController,
+        builder: (context, sc) => ListView(
+          controller: sc,
           padding: const EdgeInsets.all(20),
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            _DragHandle(),
             const SizedBox(height: 16),
-            Text(
-              'Thành tích 2048',
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
+            Text('Thành tích 2048',
+                style: Theme.of(context).textTheme.headlineMedium,
+                textAlign: TextAlign.center),
             const SizedBox(height: 20),
             _Game2048OverviewCard(best: best2048),
             const SizedBox(height: 12),
@@ -821,36 +1311,284 @@ class _StatsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      children: [
-        const SizedBox(
-          height: 64,
-          child: AppBrandHeader(subtitle: 'Theo dõi thành tích các trò chơi'),
-        ),
-        const SizedBox(height: 24),
-        _SectionLabel('Danh sách trò chơi'),
-        const SizedBox(height: 12),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final completion = stats.started == 0
+        ? 0
+        : (stats.completed * 100 / stats.started).round();
 
-        // ── Card Thành tích Sudoku ──────────────────────────────────
-        _StatsGameCard(
-          title: 'Sudoku',
-          subtitle: 'Thắng ${stats.completed} ván • Tỉ lệ ${(stats.started == 0 ? 0 : (stats.completed * 100 / stats.started)).round()}%',
-          assetPath: 'assets/logo_game/sudoku.png',
-          onTap: () => _showSudokuDetail(context),
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: _SectionHeader(
+            title: 'Thành tích',
+            subtitle: 'Theo dõi hành trình chinh phục',
+            isDark: isDark,
+          ),
         ),
-        const SizedBox(height: 12),
 
-        // ── Card Thành tích 2048 ─────────────────────────────────────
-        _StatsGameCard(
-          title: '2048',
-          subtitle: 'Kỷ lục: $best2048 điểm',
-          assetPath: 'assets/logo_game/2048.jpg',
-          onTap: () => _show2048Detail(context),
+        // XP ring card
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: _XPCard(
+              completion: completion,
+              completed: stats.completed,
+              started: stats.started,
+              best2048: best2048,
+              isDark: isDark,
+            ),
+          ),
+        ),
+
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: _SectionLabel('Trò chơi'),
+          ),
+        ),
+
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _StatsGameCard(
+                title: 'Sudoku',
+                subtitle:
+                    'Thắng ${stats.completed} ván • Tỉ lệ $completion%',
+                assetPath: 'assets/logo_game/sudoku.png',
+                accentColor: const Color(0xFF7C3AED),
+                onTap: () => _showSudokuDetail(context),
+              ),
+              const SizedBox(height: 10),
+              _StatsGameCard(
+                title: '2048',
+                subtitle: 'Kỷ lục: $best2048 điểm',
+                assetPath: 'assets/logo_game/2048.jpg',
+                accentColor: const Color(0xFFF59E0B),
+                onTap: () => _show2048Detail(context),
+              ),
+              const SizedBox(height: 10),
+              _StatsGameCard(
+                title: 'Dò Mìn',
+                subtitle: 'Phiêu lưu với mìn không thương tiếc 💣',
+                assetPath: 'assets/logo_game/do-min.png',
+                accentColor: const Color(0xFF10B981),
+                onTap: () {},
+              ),
+              const SizedBox(height: 10),
+              _StatsGameCard(
+                title: 'Cờ Caro',
+                subtitle: 'Đấu trí với AI hoặc bạn bè',
+                assetPath: 'assets/logo_game/ox.jpg',
+                accentColor: const Color(0xFF0891B2),
+                onTap: () {},
+              ),
+              const SizedBox(height: 10),
+              _StatsGameCard(
+                title: 'Cờ Tỷ Phú',
+                subtitle: 'Làm giàu nhanh nhất Việt Nam 🏙️',
+                assetPath: 'assets/logo_game/co ty phu.jpg',
+                accentColor: const Color(0xFFEF4444),
+                onTap: () {},
+              ),
+            ]),
+          ),
         ),
       ],
     );
   }
+}
+
+class _XPCard extends StatelessWidget {
+  const _XPCard({
+    required this.completion,
+    required this.completed,
+    required this.started,
+    required this.best2048,
+    required this.isDark,
+  });
+  final int completion;
+  final int completed;
+  final int started;
+  final int best2048;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF1C1038), Color(0xFF0D1326)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  const Color(0xFF6D28D9).withValues(alpha: 0.08),
+                  const Color(0xFF0891B2).withValues(alpha: 0.06),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF7C3AED).withValues(alpha: 0.25)
+              : const Color(0xFF7C3AED).withValues(alpha: 0.12),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Ring
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: CustomPaint(
+              painter: _RingPainter(
+                progress: completion / 100,
+                ringColor: const Color(0xFF7C3AED),
+                trackColor: isDark
+                    ? const Color(0xFF252847)
+                    : const Color(0xFFEDE9FE),
+              ),
+              child: Center(
+                child: Text(
+                  '$completion%',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: isDark
+                        ? const Color(0xFFA78BFA)
+                        : const Color(0xFF6D28D9),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GradientText(
+                  'Chiến binh Trí tuệ',
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFA78BFA), Color(0xFF22D3EE)],
+                  ),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _MiniStat(
+                  label: 'Sudoku hoàn thành',
+                  value: '$completed/$started',
+                  color: const Color(0xFF7C3AED),
+                ),
+                const SizedBox(height: 3),
+                _MiniStat(
+                  label: 'Điểm 2048 cao nhất',
+                  value: '$best2048',
+                  color: const Color(0xFFF59E0B),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({
+    required this.progress,
+    required this.ringColor,
+    required this.trackColor,
+  });
+  final double progress;
+  final Color ringColor;
+  final Color trackColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.shortestSide / 2) - 6;
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round;
+    final ringPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [ringColor, const Color(0xFF22D3EE)],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, trackPaint);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress.clamp(0.0, 1.0),
+      false,
+      ringPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) =>
+      old.progress != progress;
 }
 
 class _StatsGameCard extends StatelessWidget {
@@ -858,59 +1596,76 @@ class _StatsGameCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.assetPath,
+    required this.accentColor,
     required this.onTap,
   });
   final String title;
   final String subtitle;
   final String assetPath;
+  final Color accentColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
     return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
+      color: isDark ? const Color(0xFF141B2D) : colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              _GameImageBadge(assetPath: assetPath),
-              const SizedBox(width: 14),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.3),
+                  ),
+                  boxShadow: isDark
+                      ? [
+                          BoxShadow(
+                            color: accentColor.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                          )
+                        ]
+                      : [],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: Image.asset(assetPath, fit: BoxFit.cover),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text(title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        )),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
+                        fontSize: 12,
                         color: colors.onSurfaceVariant,
-                        fontSize: 13,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: onTap,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: const Text('Chi tiết'),
-              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: colors.onSurfaceVariant, size: 20),
             ],
           ),
         ),
@@ -919,7 +1674,400 @@ class _StatsGameCard extends StatelessWidget {
   }
 }
 
-/// Card tổng quan Sudoku — 3 chỉ số chính.
+// ═══════════════════════════════════════════════════════════════════════════
+//  TAB 3 — CÀI ĐẶT
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _SettingsTab extends StatelessWidget {
+  const _SettingsTab({
+    required this.onThemeChanged,
+    required this.onShowTutorial,
+  });
+  final ValueChanged<ThemeMode> onThemeChanged;
+  final VoidCallback onShowTutorial;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mode = Theme.of(context).brightness;
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: _SectionHeader(
+            title: 'Cài đặt',
+            subtitle: 'Cá nhân hoá trải nghiệm',
+            isDark: isDark,
+          ),
+        ),
+
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              // Profile card
+              _ProfileCard(isDark: isDark),
+              const SizedBox(height: 20),
+
+              _SectionLabel('Giao diện'),
+              const SizedBox(height: 10),
+              _SettingsGroup(
+                children: [
+                  _ThemeOption(
+                    icon: Icons.brightness_auto_rounded,
+                    title: 'Theo hệ thống',
+                    subtitle: 'Tự động theo thiết bị',
+                    selected:
+                        MediaQuery.platformBrightnessOf(context) == mode,
+                    onTap: () => onThemeChanged(ThemeMode.system),
+                  ),
+                  const Divider(height: 1, indent: 64),
+                  _ThemeOption(
+                    icon: Icons.light_mode_rounded,
+                    title: 'Sáng',
+                    subtitle: 'Nền trắng, chữ đậm',
+                    selected: mode == Brightness.light,
+                    onTap: () => onThemeChanged(ThemeMode.light),
+                  ),
+                  const Divider(height: 1, indent: 64),
+                  _ThemeOption(
+                    icon: Icons.dark_mode_rounded,
+                    title: 'Tối',
+                    subtitle: 'Nền đêm, dịu mắt, premium',
+                    selected: mode == Brightness.dark,
+                    onTap: () => onThemeChanged(ThemeMode.dark),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+              _SectionLabel('Hỗ trợ'),
+              const SizedBox(height: 10),
+              _SettingsGroup(
+                children: [
+                  ListTile(
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.help_outline_rounded,
+                          color: Color(0xFF7C3AED), size: 20),
+                    ),
+                    title: const Text('Hướng dẫn Sudoku'),
+                    subtitle: const Text('Xem lại cách chơi'),
+                    trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                    onTap: onShowTutorial,
+                  ),
+                  const Divider(height: 1, indent: 64),
+                  ListTile(
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF22D3EE).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.info_outline_rounded,
+                          color: Color(0xFF22D3EE), size: 20),
+                    ),
+                    title: const Text('Về ứng dụng'),
+                    subtitle: const Text('Chị Mười • v1.0'),
+                    onTap: () => showAboutDialog(
+                      context: context,
+                      applicationName: 'Chị Mười',
+                      applicationVersion: '1.0.0',
+                      applicationLegalese: '© 2026 Chị Mười Games',
+                      children: const [
+                        SizedBox(height: 12),
+                        Text('5 game trí tuệ đỉnh cao — chơi offline, không quảng cáo.'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+              // Version footer
+              Center(
+                child: Text(
+                  'Chị Mười v1.0.0 — Made with ❤️ in VN',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color:
+                        Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF1C1038), Color(0xFF0D1326)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFEDE9FE), Color(0xFFCFF1FA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        border: Border.all(
+          color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: AppGradients.violetCyan,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GradientText(
+                  'Chị Mười',
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFA78BFA), Color(0xFF22D3EE)],
+                  ),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Game Collection • 5 Trò chơi',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? const Color(0xFF9B9EC8)
+                        : const Color(0xFF4B5478),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              gradient: AppGradients.violetCyan,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '⭐ Pro',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF141B2D) : colors.surfaceContainerLow,
+        border: Border.all(
+          color: isDark
+              ? colors.primary.withValues(alpha: 0.1)
+              : colors.outlineVariant,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(children: children),
+      ),
+    );
+  }
+}
+
+class _ThemeOption extends StatelessWidget {
+  const _ThemeOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: selected
+              ? colors.primary.withValues(alpha: 0.12)
+              : colors.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon,
+            color: selected ? colors.primary : colors.onSurfaceVariant,
+            size: 20),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: selected ? colors.primary : colors.onSurface,
+        ),
+      ),
+      subtitle: Text(subtitle),
+      trailing: selected
+          ? Icon(Icons.check_circle_rounded,
+              color: colors.primary, size: 20)
+          : Icon(Icons.radio_button_unchecked_rounded,
+              color: colors.onSurfaceVariant, size: 20),
+      onTap: onTap,
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Shared Helpers
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+    required this.isDark,
+  });
+  final String title;
+  final String subtitle;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GradientText(
+            title,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFA78BFA), Color(0xFF22D3EE)],
+            ),
+            style: const TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark
+                  ? const Color(0xFF9B9EC8)
+                  : const Color(0xFF4B5478),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              letterSpacing: 1.5,
+              fontSize: 11,
+            ),
+      ),
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.outlineVariant,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Stats Detail Charts (Sudoku + 2048)
+// ═══════════════════════════════════════════════════════════════════════════
+
 class _SudokuOverviewCard extends StatelessWidget {
   const _SudokuOverviewCard({required this.stats});
   final SudokuStats stats;
@@ -936,43 +2084,28 @@ class _SudokuOverviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.insights_rounded, color: colors.primary),
-                const SizedBox(width: 10),
-                Text(
-                  'Tổng quan',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-            ),
+            Row(children: [
+              Icon(Icons.insights_rounded, color: colors.primary),
+              const SizedBox(width: 10),
+              Text('Tổng quan',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ]),
             const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
-                  child: _MetricCell(
-                    label: 'Bắt đầu',
-                    value: '${stats.started}',
-                  ),
-                ),
+                    child: _MetricCell(
+                        label: 'Bắt đầu', value: '${stats.started}')),
                 Expanded(
-                  child: _MetricCell(
-                    label: 'Hoàn thành',
-                    value: '${stats.completed}',
-                  ),
-                ),
+                    child: _MetricCell(
+                        label: 'Hoàn thành',
+                        value: '${stats.completed}')),
                 Expanded(
-                  child: _MetricCell(
-                    label: 'Tỉ lệ',
-                    value: '$completion%',
-                  ),
-                ),
+                    child: _MetricCell(
+                        label: 'Tỉ lệ', value: '$completion%')),
                 Expanded(
-                  child: _MetricCell(
-                    label: 'Streak',
-                    value: '${stats.bestStreak}',
-                  ),
-                ),
+                    child: _MetricCell(
+                        label: 'Streak', value: '${stats.bestStreak}')),
               ],
             ),
           ],
@@ -982,7 +2115,6 @@ class _SudokuOverviewCard extends StatelessWidget {
   }
 }
 
-/// Biểu đồ cột: số ván bắt đầu / hoàn thành theo từng độ khó Sudoku.
 class _SudokuDifficultyChart extends StatelessWidget {
   const _SudokuDifficultyChart({required this.stats});
   final SudokuStats stats;
@@ -1005,24 +2137,16 @@ class _SudokuDifficultyChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.bar_chart_rounded, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Ván theo độ khó',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                _LegendDot(color: colors.primary, label: 'Bắt đầu'),
-                const SizedBox(width: 8),
-                _LegendDot(
-                  color: colors.tertiary,
-                  label: 'Hoàn thành',
-                ),
-              ],
-            ),
+            Row(children: [
+              Icon(Icons.bar_chart_rounded, color: colors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text('Ván theo độ khó',
+                      style: Theme.of(context).textTheme.titleLarge)),
+              _LegendDot(color: colors.primary, label: 'Bắt đầu'),
+              const SizedBox(width: 8),
+              _LegendDot(color: colors.tertiary, label: 'Hoàn thành'),
+            ]),
             const SizedBox(height: 20),
             SizedBox(
               height: 180,
@@ -1037,8 +2161,7 @@ class _SudokuDifficultyChart extends StatelessWidget {
                     )
                   : _EmptyChart(
                       message: 'Chưa có ván Sudoku nào',
-                      icon: Icons.bar_chart_rounded,
-                    ),
+                      icon: Icons.bar_chart_rounded),
             ),
           ],
         ),
@@ -1056,7 +2179,6 @@ class _SudokuDifficultyChart extends StatelessWidget {
   }
 }
 
-/// Biểu đồ cột: thời gian kỷ lục theo độ khó (đơn vị giây).
 class _SudokuBestTimesChart extends StatelessWidget {
   const _SudokuBestTimesChart({required this.stats});
   final SudokuStats stats;
@@ -1079,19 +2201,14 @@ class _SudokuBestTimesChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.timer_outlined, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Kỷ lục thời gian',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                _LegendDot(color: colors.tertiary, label: 'Giây'),
-              ],
-            ),
+            Row(children: [
+              Icon(Icons.timer_outlined, color: colors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text('Kỷ lục thời gian',
+                      style: Theme.of(context).textTheme.titleLarge)),
+              _LegendDot(color: colors.tertiary, label: 'Giây'),
+            ]),
             const SizedBox(height: 20),
             SizedBox(
               height: 180,
@@ -1108,8 +2225,7 @@ class _SudokuBestTimesChart extends StatelessWidget {
                     )
                   : _EmptyChart(
                       message: 'Chưa hoàn thành ván nào',
-                      icon: Icons.timer_outlined,
-                    ),
+                      icon: Icons.timer_outlined),
             ),
           ],
         ),
@@ -1126,7 +2242,6 @@ class _SudokuBestTimesChart extends StatelessWidget {
   }
 }
 
-/// Card tổng quan 2048.
 class _Game2048OverviewCard extends StatelessWidget {
   const _Game2048OverviewCard({required this.best});
   final int best;
@@ -1146,35 +2261,25 @@ class _Game2048OverviewCard extends StatelessWidget {
                 color: colors.tertiaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                Icons.crop_square_rounded,
-                color: colors.onTertiaryContainer,
-              ),
+              child: Icon(Icons.crop_square_rounded,
+                  color: colors.onTertiaryContainer),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Kỷ lục 2048',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                  Text('Kỷ lục 2048',
+                      style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 2),
-                  Text(
-                    'Điểm cao nhất',
-                    style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 13,
-                    ),
-                  ),
+                  Text('Điểm cao nhất',
+                      style: TextStyle(
+                          color: colors.onSurfaceVariant, fontSize: 13)),
                 ],
               ),
             ),
-            Text(
-              '$best',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            Text('$best',
+                style: Theme.of(context).textTheme.headlineMedium),
           ],
         ),
       ),
@@ -1182,7 +2287,6 @@ class _Game2048OverviewCard extends StatelessWidget {
   }
 }
 
-/// Biểu đồ cột: lịch sử điểm các ván 2048 gần nhất.
 class _Game2048ScoreChart extends StatelessWidget {
   const _Game2048ScoreChart({required this.history});
   final List<int> history;
@@ -1190,16 +2294,10 @@ class _Game2048ScoreChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final entries = <_ChartEntry>[];
-    for (var i = 0; i < history.length; i++) {
-      entries.add(
-        _ChartEntry(
-          label: '${i + 1}',
-          started: history[i],
-          completed: 0,
-        ),
-      );
-    }
+    final entries = <_ChartEntry>[
+      for (var i = 0; i < history.length; i++)
+        _ChartEntry(label: '${i + 1}', started: history[i], completed: 0),
+    ];
     final hasData = entries.isNotEmpty;
     return Card(
       child: Padding(
@@ -1207,19 +2305,16 @@ class _Game2048ScoreChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.show_chart_rounded, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Lịch sử điểm',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                _LegendDot(color: colors.tertiary, label: 'Ván ${entries.length}'),
-              ],
-            ),
+            Row(children: [
+              Icon(Icons.show_chart_rounded, color: colors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text('Lịch sử điểm',
+                      style: Theme.of(context).textTheme.titleLarge)),
+              _LegendDot(
+                  color: colors.tertiary,
+                  label: 'Ván ${entries.length}'),
+            ]),
             const SizedBox(height: 20),
             SizedBox(
               height: 180,
@@ -1230,14 +2325,13 @@ class _Game2048ScoreChart extends StatelessWidget {
                       accent: colors.tertiary,
                       track: colors.surfaceContainer,
                       labelColor: colors.onSurfaceVariant,
-                      maxValue: _max(entries),
+                      maxValue: _maxChart(entries),
                       single: true,
                       formatValue: (v) => '$v',
                     )
                   : _EmptyChart(
                       message: 'Chưa có ván 2048 nào',
-                      icon: Icons.show_chart_rounded,
-                    ),
+                      icon: Icons.show_chart_rounded),
             ),
           ],
         ),
@@ -1245,7 +2339,7 @@ class _Game2048ScoreChart extends StatelessWidget {
     );
   }
 
-  int _max(List<_ChartEntry> entries) {
+  int _maxChart(List<_ChartEntry> entries) {
     var m = 1;
     for (final e in entries) {
       if (e.started > m) m = e.started;
@@ -1254,7 +2348,7 @@ class _Game2048ScoreChart extends StatelessWidget {
   }
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Chart primitives ────────────────────────────────────────────────────────
 
 class _MetricCell extends StatelessWidget {
   const _MetricCell({required this.label, required this.value});
@@ -1296,24 +2390,26 @@ class _LegendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
-      const SizedBox(width: 6),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    ],
-  );
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color:
+                  Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      );
 }
 
 class _ChartEntry {
@@ -1338,7 +2434,6 @@ class _BarChart extends StatelessWidget {
     this.single = false,
     this.formatValue,
   });
-
   final List<_ChartEntry> entries;
   final Color primary;
   final Color accent;
@@ -1350,28 +2445,23 @@ class _BarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, c) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (final e in entries) ...[
-              Expanded(
-                child: _Bar(
-                  entry: e,
-                  maxValue: maxValue,
-                  primary: primary,
-                  accent: accent,
-                  track: track,
-                  labelColor: labelColor,
-                  single: single,
-                  formatValue: formatValue,
-                ),
-              ),
-            ],
-          ],
-        );
-      },
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final e in entries)
+          Expanded(
+            child: _Bar(
+              entry: e,
+              maxValue: maxValue,
+              primary: primary,
+              accent: accent,
+              track: track,
+              labelColor: labelColor,
+              single: single,
+              formatValue: formatValue,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1387,7 +2477,6 @@ class _Bar extends StatelessWidget {
     required this.single,
     this.formatValue,
   });
-
   final _ChartEntry entry;
   final int maxValue;
   final Color primary;
@@ -1399,7 +2488,7 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h1 = single ? entry.started : entry.started;
+    final h1 = entry.started;
     final h2 = single ? 0 : entry.completed;
     final v1 = h1 / maxValue;
     final v2 = h2 / maxValue;
@@ -1408,9 +2497,8 @@ class _Bar extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Số hiển thị trên đầu cột
           Text(
-            (h1 > 0 ? formatValue?.call(h1) ?? '$h1' : ''),
+            h1 > 0 ? formatValue?.call(h1) ?? '$h1' : '',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -1425,21 +2513,13 @@ class _Bar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: _AnimatedBar(
-                    fraction: v1,
-                    color: primary,
-                    track: track,
-                  ),
-                ),
+                    child: _AnimatedBar(
+                        fraction: v1, color: primary, track: track)),
                 if (!single) ...[
                   const SizedBox(width: 3),
                   Expanded(
-                    child: _AnimatedBar(
-                      fraction: v2,
-                      color: accent,
-                      track: track,
-                    ),
-                  ),
+                      child: _AnimatedBar(
+                          fraction: v2, color: accent, track: track)),
                 ],
               ],
             ),
@@ -1485,21 +2565,22 @@ class _AnimatedBarState extends State<_AnimatedBar>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _anim = Tween<double>(begin: 0, end: widget.fraction.clamp(0.0, 1.0))
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _anim =
+        Tween<double>(begin: 0, end: widget.fraction.clamp(0.0, 1.0))
+            .animate(CurvedAnimation(
+                parent: _ctrl, curve: Curves.easeOutCubic));
     _ctrl.forward();
   }
 
   @override
-  void didUpdateWidget(covariant _AnimatedBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.fraction != widget.fraction) {
+  void didUpdateWidget(covariant _AnimatedBar old) {
+    super.didUpdateWidget(old);
+    if (old.fraction != widget.fraction) {
       _anim = Tween<double>(
-        begin: oldWidget.fraction.clamp(0.0, 1.0),
+        begin: old.fraction.clamp(0.0, 1.0),
         end: widget.fraction.clamp(0.0, 1.0),
-      ).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-      );
+      ).animate(CurvedAnimation(
+          parent: _ctrl, curve: Curves.easeOutCubic));
       _ctrl
         ..reset()
         ..forward();
@@ -1515,32 +2596,28 @@ class _AnimatedBarState extends State<_AnimatedBar>
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, c) {
-        return AnimatedBuilder(
-          animation: _anim,
-          builder: (context, _) {
-            return Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                Container(
-                  height: c.maxHeight,
-                  decoration: BoxDecoration(
-                    color: widget.track,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                Container(
-                  height: c.maxHeight * _anim.value,
-                  decoration: BoxDecoration(
-                    color: widget.color,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (context, c) => AnimatedBuilder(
+        animation: _anim,
+        builder: (context, _) => Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Container(
+              height: c.maxHeight,
+              decoration: BoxDecoration(
+                color: widget.track,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            Container(
+              height: c.maxHeight * _anim.value,
+              decoration: BoxDecoration(
+                color: widget.color,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1559,13 +2636,9 @@ class _EmptyChart extends StatelessWidget {
         children: [
           Icon(icon, size: 36, color: colors.outline),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(
-              color: colors.onSurfaceVariant,
-              fontSize: 13,
-            ),
-          ),
+          Text(message,
+              style: TextStyle(
+                  color: colors.onSurfaceVariant, fontSize: 13)),
         ],
       ),
     );
@@ -1577,138 +2650,13 @@ String _formatTime(int seconds) {
   return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-//  TAB 3 ─ CÀI ĐẶT
-// ───────────────────────────────────────────────────────────────────────────
-
-class _SettingsTab extends StatelessWidget {
-  const _SettingsTab({
-    required this.onThemeChanged,
-    required this.onShowTutorial,
-  });
-  final ValueChanged<ThemeMode> onThemeChanged;
-  final VoidCallback onShowTutorial;
-
-  @override
-  Widget build(BuildContext context) {
-    final mode = Theme.of(context).brightness;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      children: [
-        const SizedBox(
-          height: 64,
-          child: AppBrandHeader(subtitle: 'Cá nhân hoá trải nghiệm'),
-        ),
-        const SizedBox(height: 28),
-        _SectionLabel('Giao diện'),
-        const SizedBox(height: 12),
-        Card(
-          child: Column(
-            children: [
-              _ThemeOption(
-                icon: Icons.brightness_auto_rounded,
-                title: 'Theo hệ thống',
-                subtitle: 'Tự động theo thiết bị',
-                selected: MediaQuery.platformBrightnessOf(context) == mode,
-                onTap: () => onThemeChanged(ThemeMode.system),
-              ),
-              const Divider(height: 1, indent: 64),
-              _ThemeOption(
-                icon: Icons.light_mode_rounded,
-                title: 'Sáng',
-                subtitle: 'Nền trắng, chữ đậm',
-                selected: mode == Brightness.light,
-                onTap: () => onThemeChanged(ThemeMode.light),
-              ),
-              const Divider(height: 1, indent: 64),
-              _ThemeOption(
-                icon: Icons.dark_mode_rounded,
-                title: 'Tối',
-                subtitle: 'Nền xanh đen, dịu mắt',
-                selected: mode == Brightness.dark,
-                onTap: () => onThemeChanged(ThemeMode.dark),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        _SectionLabel('Hỗ trợ'),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.help_outline_rounded),
-            title: const Text('Hướng dẫn Sudoku'),
-            subtitle: const Text('Xem lại cách chơi'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: onShowTutorial,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.info_outline_rounded),
-            title: const Text('Về ứng dụng'),
-            subtitle: const Text('Chị Mười • v1.0'),
-            onTap: () => showAboutDialog(
-              context: context,
-              applicationName: 'Chị Mười',
-              applicationVersion: '1.0.0',
-              applicationLegalese: '© 2026 Chị Mười Games',
-              children: const [
-                SizedBox(height: 12),
-                Text(
-                  'Sudoku và 2048 — chơi nhanh, gọn, đẹp.',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ThemeOption extends StatelessWidget {
-  const _ThemeOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ListTile(
-      leading: Icon(icon, color: selected ? colors.primary : colors.onSurfaceVariant),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: selected ? colors.primary : colors.onSurface,
-        ),
-      ),
-      subtitle: Text(subtitle),
-      trailing: selected
-          ? Icon(Icons.check_circle_rounded, color: colors.primary)
-          : const Icon(Icons.radio_button_unchecked_rounded),
-      onTap: onTap,
-    );
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-//  SHEETS: chọn độ khó + hướng dẫn
-// ───────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  Difficulty Sheet + Tutorial Sheet
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _DifficultySheet extends StatefulWidget {
   const _DifficultySheet();
+
   @override
   State<_DifficultySheet> createState() => _DifficultySheetState();
 }
@@ -1719,6 +2667,8 @@ class _DifficultySheetState extends State<_DifficultySheet> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -1728,15 +2678,14 @@ class _DifficultySheetState extends State<_DifficultySheet> {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: Text(
-                'Chọn độ khó',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
+              child: Text('Chọn độ khó',
+                  style: Theme.of(context).textTheme.headlineMedium),
             ),
-            const Padding(
-              padding: EdgeInsets.only(left: 4, bottom: 12),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 12),
               child: Text(
                 'Bạn luôn có thể quay lại và chọn mức khác.',
+                style: TextStyle(color: colors.onSurfaceVariant),
               ),
             ),
             const SizedBox(height: 4),
@@ -1746,16 +2695,16 @@ class _DifficultySheetState extends State<_DifficultySheet> {
                 child: Material(
                   color: selected == d
                       ? colors.primaryContainer
-                      : colors.surfaceContainer,
+                      : (isDark
+                          ? const Color(0xFF141B2D)
+                          : colors.surfaceContainer),
                   borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () => setState(() => selected = d),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                          horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
                           Icon(
@@ -1771,19 +2720,13 @@ class _DifficultySheetState extends State<_DifficultySheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  d.label,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  d.description,
-                                  style: TextStyle(
-                                    color: colors.onSurfaceVariant,
-                                    fontSize: 13,
-                                  ),
-                                ),
+                                Text(d.label,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
+                                Text(d.description,
+                                    style: TextStyle(
+                                        color: colors.onSurfaceVariant,
+                                        fontSize: 13)),
                               ],
                             ),
                           ),
@@ -1808,55 +2751,47 @@ class _DifficultySheetState extends State<_DifficultySheet> {
 
 class _TutorialSheet extends StatelessWidget {
   const _TutorialSheet();
+
   @override
   Widget build(BuildContext context) => SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 16),
-            child: Text(
-              'Cách chơi Sudoku',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 16),
+                child: Text('Cách chơi Sudoku',
+                    style: Theme.of(context).textTheme.headlineMedium),
+              ),
+              const _Tip(Icons.grid_3x3_rounded,
+                  'Mỗi hàng, cột và ô vuông 3×3 chứa đủ các số 1–9.'),
+              const _Tip(Icons.edit_note_rounded,
+                  'Bật Ghi chú để lưu các ứng viên nhỏ trong ô.'),
+              const _Tip(Icons.lightbulb_outline_rounded,
+                  'Dùng tối đa 3 gợi ý; sai 3 lần sẽ kết thúc lượt.'),
+              const _Tip(Icons.keyboard_rounded,
+                  'Máy tính: phím mũi tên, 1–9, N, H, P và Ctrl/Cmd+Z.'),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Đã hiểu'),
+                ),
+              ),
+            ],
           ),
-          const _Tip(
-            Icons.grid_3x3_rounded,
-            'Mỗi hàng, cột và ô vuông 3×3 chứa đủ các số 1–9.',
-          ),
-          const _Tip(
-            Icons.edit_note_rounded,
-            'Bật Ghi chú để lưu các ứng viên nhỏ trong ô.',
-          ),
-          const _Tip(
-            Icons.lightbulb_outline_rounded,
-            'Dùng tối đa 3 gợi ý; sai 3 lần sẽ kết thúc lượt.',
-          ),
-          const _Tip(
-            Icons.keyboard_rounded,
-            'Máy tính: phím mũi tên, 1–9, N, H, P và Ctrl/Cmd+Z.',
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Đã hiểu'),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class _Tip extends StatelessWidget {
   const _Tip(this.icon, this.text);
   final IconData icon;
   final String text;
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -1872,16 +2807,70 @@ class _Tip extends StatelessWidget {
               color: colors.primaryContainer,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: colors.onPrimaryContainer, size: 20),
+            child:
+                Icon(icon, color: colors.onPrimaryContainer, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                text,
-                style: const TextStyle(height: 1.4),
-              ),
+              child: Text(text,
+                  style: const TextStyle(height: 1.4)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Exposed brand header (used by other screens if needed).
+class AppBrandHeader extends StatelessWidget {
+  const AppBrandHeader(
+      {super.key, required this.subtitle, this.compact = false});
+  final String subtitle;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final size = compact ? 44.0 : 52.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: BorderRadius.circular(size * 0.28),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.28),
+              child: Image.asset('assets/logo.jpg',
+                  fit: BoxFit.cover, width: size, height: size),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Chị Mười',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
