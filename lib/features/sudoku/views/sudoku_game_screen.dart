@@ -31,6 +31,8 @@ class SudokuGameScreen extends StatefulWidget {
     );
     final stats = await repo.loadStats();
     stats.started++;
+    stats.startedByDifficulty[difficulty.name] =
+        (stats.startedByDifficulty[difficulty.name] ?? 0) + 1;
     await repo.saveStats(stats);
     await repo.saveGame(game);
     if (context.mounted) {
@@ -76,6 +78,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     s.streak++;
     if (s.streak > s.bestStreak) s.bestStreak = s.streak;
     final key = controller.game.difficulty.name;
+    s.completedByDifficulty[key] = (s.completedByDifficulty[key] ?? 0) + 1;
     if (s.bestTimes[key] == null ||
         controller.game.elapsedSeconds < s.bestTimes[key]!) {
       s.bestTimes[key] = controller.game.elapsedSeconds;
@@ -296,7 +299,7 @@ class SudokuTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
       child: SizedBox(
         height: 56,
         child: Row(
@@ -317,31 +320,20 @@ class SudokuTopBar extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           letterSpacing: 1.4,
                           color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w800,
                         ),
                   ),
                   Text(
                     game.difficulty.label,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                formatTime(game.elapsedSeconds),
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: colors.onSurface,
-                ),
-              ),
-            ),
+            // Lỗi chip ─ gọn ở header cạnh nút pause.
+            _MistakeChip(mistakes: game.mistakes, limit: game.mistakeLimit),
             const SizedBox(width: 4),
             IconButton(
               tooltip: 'Tạm dừng',
@@ -350,6 +342,48 @@ class SudokuTopBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MistakeChip extends StatelessWidget {
+  const _MistakeChip({required this.mistakes, required this.limit});
+  final int mistakes;
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Lỗi',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: colors.onSurfaceVariant,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$mistakes/$limit',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+              fontFeatures: const [FontFeature.tabularFigures()],
+              color: colors.onSurface,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -387,110 +421,27 @@ class SudokuBoard extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(2),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: GridView.builder(
+              // Lưới 3×3 block, mỗi block chứa 9 ô nhỏ + border riêng.
+              child: GridView.count(
+                crossAxisCount: 3,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: 81,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 9,
-                ),
-                itemBuilder: (context, i) {
-                  final row = i ~/ 9,
-                      col = i % 9,
-                      value = g.values[i],
-                      fixed = g.clues[i] != 0;
-                  final isSelected = i == selected;
-                  final same = selected != null &&
-                      value != 0 &&
-                      value == g.values[selected];
-                  final related = selected != null &&
-                      !isSelected &&
-                      (row == selected ~/ 9 ||
-                          col == selected % 9 ||
-                          (row ~/ 3 == selected ~/ 9 ~/ 3 &&
-                              col ~/ 3 == selected % 9 ~/ 3));
-
-                  // Border đậm cho hàng/cột cuối của mỗi block 3×3
-                  final isBlockRight = col % 3 == 2 && col != 8;
-                  final isBlockBottom = row % 3 == 2 && row != 8;
-
-                  Color bg;
-                  if (isSelected) {
-                    bg = colors.primaryContainer;
-                  } else if (same) {
-                    bg = colors.tertiaryContainer;
-                  } else if (related) {
-                    bg = colors.surfaceContainer;
-                  } else {
-                    bg = colors.surfaceContainerLow;
-                  }
-
-                  return Semantics(
-                    button: true,
-                    selected: isSelected,
-                    label:
-                        'Hàng ${row + 1}, cột ${col + 1}, ${fixed ? "ô cố định" : "ô có thể sửa"}, ${value == 0 ? "trống" : "giá trị $value"}',
-                    child: InkWell(
-                      onTap: () => controller.select(i),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 140),
-                        curve: Curves.easeOutCubic,
-                        decoration: BoxDecoration(
-                          color: bg,
-                          border: Border(
-                            top: BorderSide(
-                              color: row == 0
-                                  ? Colors.transparent
-                                  : colors.outlineVariant,
-                              width: row == 0 ? 0 : 0.5,
-                            ),
-                            left: BorderSide(
-                              color: col == 0
-                                  ? Colors.transparent
-                                  : colors.outlineVariant,
-                              width: col == 0 ? 0 : 0.5,
-                            ),
-                            right: BorderSide(
-                              color: isBlockRight
-                                  ? colors.outline
-                                  : Colors.transparent,
-                              width: isBlockRight ? 1.5 : 0,
-                            ),
-                            bottom: BorderSide(
-                              color: isBlockBottom
-                                  ? colors.outline
-                                  : Colors.transparent,
-                              width: isBlockBottom ? 1.5 : 0,
-                            ),
-                          ),
-                        ),
-                        child: Center(
-                          child: value != 0
-                              ? Text(
-                                  '$value',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    height: 1,
-                                    fontWeight: fixed
-                                        ? FontWeight.w800
-                                        : FontWeight.w700,
-                                    color: fixed
-                                        ? colors.onSurface
-                                        : colors.primary,
-                                  ),
-                                )
-                              : _Notes(
-                                  notes: g.notes[i] ?? {},
-                                  active: isSelected,
-                                ),
-                        ),
+                children: [
+                  for (var br = 0; br < 3; br++)
+                    for (var bc = 0; bc < 3; bc++)
+                      _SudokuBlock(
+                        controller: controller,
+                        blockRow: br,
+                        blockCol: bc,
+                        selected: selected,
+                        colors: colors,
                       ),
-                    ),
-                  );
-                },
+                ],
               ),
+              // NOTE: Border đậm 3×3 nằm ở Border.all(container) + clipRRect ở
+              // trên; các đường mảnh 0.5 px bên trong được vẽ từ _SudokuBlock.
             ),
           ),
         ),
@@ -499,8 +450,108 @@ class SudokuBoard extends StatelessWidget {
   }
 }
 
-class _Notes extends StatelessWidget {
-  const _Notes({required this.notes, this.active = false});
+/// Một block 3×3 ─ có border đậm riêng bao ngoài, 9 ô nhỏ bên trong.
+class _SudokuBlock extends StatelessWidget {
+  const _SudokuBlock({
+    required this.controller,
+    required this.blockRow,
+    required this.blockCol,
+    required this.selected,
+    required this.colors,
+  });
+  final SudokuViewModel controller;
+  final int blockRow;
+  final int blockCol;
+  final int? selected;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = controller.game;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.outline, width: 1),
+      ),
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 9,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+        ),
+        itemBuilder: (context, idx) {
+          final r = blockRow * 3 + idx ~/ 3;
+          final c = blockCol * 3 + idx % 3;
+          final i = r * 9 + c;
+          final value = g.values[i];
+          final fixed = g.clues[i] != 0;
+          final isSelected = i == selected;
+          final sel = selected;
+          final same = sel != null &&
+              value != 0 &&
+              value == g.values[sel];
+          final related = sel != null &&
+              !isSelected &&
+              (r == sel ~/ 9 ||
+                  c == sel % 9 ||
+                  (r ~/ 3 == sel ~/ 9 ~/ 3 &&
+                      c ~/ 3 == sel % 9 ~/ 3));
+
+          Color bg;
+          if (isSelected) {
+            bg = colors.primaryContainer;
+          } else if (same) {
+            bg = colors.tertiaryContainer;
+          } else if (related) {
+            bg = colors.surfaceContainer;
+          } else {
+            bg = colors.surfaceContainerLow;
+          }
+
+          return Semantics(
+            button: true,
+            selected: isSelected,
+            label:
+                'Hàng ${r + 1}, cột ${c + 1}, ${fixed ? "ô cố định" : "ô có thể sửa"}, ${value == 0 ? "trống" : "giá trị $value"}',
+            child: InkWell(
+              onTap: () => controller.select(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  color: bg,
+                ),
+                child: Center(
+                  child: value != 0
+                      ? Text(
+                          '$value',
+                          style: TextStyle(
+                            fontSize: 22,
+                            height: 1,
+                            fontWeight: fixed
+                                ? FontWeight.w800
+                                : FontWeight.w700,
+                            color: fixed
+                                ? colors.onSurface
+                                : colors.primary,
+                          ),
+                        )
+                      : _SudokuCellNotes(
+                          notes: g.notes[i] ?? {},
+                          active: isSelected,
+                        ),
+                ),
+              ),
+              // ignore: dead_code
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SudokuCellNotes extends StatelessWidget {
+  const _SudokuCellNotes({required this.notes, this.active = false});
   final Set<int> notes;
   final bool active;
 
@@ -532,6 +583,7 @@ class _Notes extends StatelessWidget {
   }
 }
 
+
 // ───────────────────────────────────────────────────────────────────────────
 //  Controls — nút bấm đồng nhất, không gradient lè lọe
 // ───────────────────────────────────────────────────────────────────────────
@@ -545,136 +597,85 @@ class SudokuControls extends StatelessWidget {
     final g = controller.game;
     final colors = Theme.of(context).colorScheme;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Stats strip ───────────────────────────────────────────────
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _StatsItem(
-                  icon: Icons.error_outline_rounded,
-                  label: 'Lỗi',
-                  value: '${g.mistakes}/${g.mistakeLimit}',
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 28,
-                color: colors.outlineVariant,
-              ),
-              Expanded(
-                child: _StatsItem(
-                  icon: Icons.lightbulb_outline_rounded,
-                  label: 'Gợi ý',
-                  value: '${3 - g.hintsUsed}/3',
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Number pad (3×3) — nút đồng nhất, một tone ─────────────────
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant),
-          ),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 9,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 1.6,
-            ),
-            itemBuilder: (context, index) {
-              final number = index + 1;
-              return _SudokuNumberKey(
-                number: number,
-                onTap: () => controller.enter(number),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Action toolbar (4 actions đều 1 kiểu) ─────────────────────
+        // ── Action toolbar (4 nút tròn, đều 1 kiểu) ──────────────────
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _SudokuAction(
-              icon: Icons.edit_note_rounded,
-              label: 'Ghi chú',
-              active: controller.noteMode,
-              onTap: controller.toggleNotes,
+            Expanded(
+              child: _SudokuAction(
+                icon: Icons.undo_rounded,
+                tooltip: 'Hoàn tác',
+                onTap: g.history.isEmpty ? null : controller.undo,
+              ),
             ),
-            _SudokuAction(
-              icon: Icons.backspace_outlined,
-              label: 'Xóa',
-              onTap: controller.erase,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SudokuAction(
+                icon: Icons.backspace_outlined,
+                tooltip: 'Xóa',
+                onTap: controller.erase,
+              ),
             ),
-            _SudokuAction(
-              icon: Icons.undo_rounded,
-              label: 'Hoàn tác',
-              onTap: g.history.isEmpty ? null : controller.undo,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SudokuAction(
+                icon: Icons.edit_note_rounded,
+                tooltip: 'Ghi chú',
+                active: controller.noteMode,
+                onTap: controller.toggleNotes,
+              ),
             ),
-            _SudokuAction(
-              icon: Icons.lightbulb_outline_rounded,
-              label: 'Gợi ý',
-              onTap: g.hintsUsed >= 3 ? null : controller.hint,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SudokuAction(
+                icon: Icons.lightbulb_outline_rounded,
+                tooltip: 'Gợi ý',
+                onTap: g.hintsUsed >= 3 ? null : controller.hint,
+              ),
             ),
           ],
         ),
-      ],
-    );
-  }
-}
+        const SizedBox(height: 20),
 
-class _StatsItem extends StatelessWidget {
-  const _StatsItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 18, color: colors.onSurfaceVariant),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: colors.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
+        // ── Number pad (3×3) — phím số đồng nhất, đậm nét ─────────────
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 9,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1,
           ),
+          itemBuilder: (context, index) {
+            final number = index + 1;
+            return _SudokuNumberKey(
+              number: number,
+              onTap: () => controller.enter(number),
+            );
+          },
         ),
-        const SizedBox(width: 6),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
-            fontFeatures: [FontFeature.tabularFigures()],
+        const SizedBox(height: 20),
+
+        // ── Nút "Trò chơi Mới" ────────────────────────────────────────
+        FilledButton(
+          onPressed: controller.retry,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+            backgroundColor: colors.primary,
+            foregroundColor: colors.onPrimary,
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.4,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
+          child: const Text('Trò chơi Mới'),
         ),
       ],
     );
@@ -741,12 +742,12 @@ class _SudokuNumberKeyState extends State<_SudokuNumberKey> {
 class _SudokuAction extends StatelessWidget {
   const _SudokuAction({
     required this.icon,
-    required this.label,
+    required this.tooltip,
     required this.onTap,
     this.active = false,
   });
   final IconData icon;
-  final String label;
+  final String tooltip;
   final VoidCallback? onTap;
   final bool active;
 
@@ -764,40 +765,27 @@ class _SudokuAction extends StatelessWidget {
         : active
             ? colors.primaryContainer
             : colors.surfaceContainerHigh;
-    return Semantics(
-      button: true,
-      enabled: !disabled,
-      selected: active,
-      label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: fg, size: 22),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: disabled
-                      ? colors.onSurfaceVariant.withValues(alpha: 0.4)
-                      : colors.onSurface,
-                ),
-              ),
-            ],
+    final size = 56.0;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        enabled: !disabled,
+        selected: active,
+        label: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(size / 2),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: bg,
+              shape: BoxShape.circle,
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: fg, size: 24),
           ),
         ),
       ),

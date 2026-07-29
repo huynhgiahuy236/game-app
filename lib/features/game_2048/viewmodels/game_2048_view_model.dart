@@ -39,6 +39,9 @@ class Game2048ViewModel extends ChangeNotifier {
   }
 
   Future<void> newGame() async {
+    if (game.moves > 0) {
+      repository.recordFinalScore(game.score);
+    }
     game.board.setAll(0, List<int>.filled(16, 0));
     game.score = 0;
     game.moves = 0;
@@ -97,6 +100,9 @@ class Game2048ViewModel extends ChangeNotifier {
     _addTile();
     game.won = game.board.any((value) => value >= 2048);
     game.gameOver = !_hasMoves();
+    if (game.gameOver) {
+      repository.recordFinalScore(game.score);
+    }
     repository.save(game);
     notifyListeners();
     return true;
@@ -141,9 +147,36 @@ class Game2048ViewModel extends ChangeNotifier {
         if (game.board[i] == 0) i,
     ];
     if (empty.isEmpty) return;
-    game.board[empty[_random.nextInt(empty.length)]] = _random.nextDouble() < .9
-        ? 2
-        : 4;
+    final tile = _pickRandomTile();
+    game.board[empty[_random.nextInt(empty.length)]] = tile;
+  }
+
+  /// Sinh số ngẫu nhiên (2/4/8) tuỳ theo ngưỡng điểm & max tile hiện tại:
+  /// - Dưới 256 điểm hoặc max < 64: 80% -> 2, 18% -> 4, 2% -> 8
+  /// - 256..1023 điểm hoặc max 64..255: 60% -> 2, 32% -> 4, 8% -> 8
+  /// - 1024..4095 điểm hoặc max 256..1023: 45% -> 2, 40% -> 4, 15% -> 8
+  /// - Từ 4096 điểm hoặc max >= 1024: 30% -> 2, 45% -> 4, 25% -> 8
+  int _pickRandomTile() {
+    final maxTile = game.board.fold<int>(0, (m, v) => v > m ? v : m);
+    final r = _random.nextDouble();
+    if (game.score >= 4096 || maxTile >= 1024) {
+      if (r < 0.30) return 2;
+      if (r < 0.75) return 4;
+      return 8;
+    }
+    if (game.score >= 1024 || maxTile >= 256) {
+      if (r < 0.45) return 2;
+      if (r < 0.85) return 4;
+      return 8;
+    }
+    if (game.score >= 256 || maxTile >= 64) {
+      if (r < 0.60) return 2;
+      if (r < 0.92) return 4;
+      return 8;
+    }
+    if (r < 0.80) return 2;
+    if (r < 0.98) return 4;
+    return 8;
   }
 
   bool _hasMoves() {

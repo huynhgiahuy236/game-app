@@ -134,6 +134,9 @@ class SudokuStats {
   int streak = 0;
   int bestStreak = 0;
   final Map<String, int> bestTimes = {};
+  // Số ván đã bắt đầu / hoàn thành theo từng độ khó (dùng cho biểu đồ).
+  final Map<String, int> startedByDifficulty = {};
+  final Map<String, int> completedByDifficulty = {};
 
   Map<String, dynamic> toJson() => {
     'started': started,
@@ -141,6 +144,8 @@ class SudokuStats {
     'streak': streak,
     'bestStreak': bestStreak,
     'bestTimes': bestTimes,
+    'startedByDifficulty': startedByDifficulty,
+    'completedByDifficulty': completedByDifficulty,
   };
   static SudokuStats fromJson(String? raw) {
     final stats = SudokuStats();
@@ -153,6 +158,14 @@ class SudokuStats {
       stats.bestStreak = j['bestStreak'] as int;
       stats.bestTimes.addAll(
         (j['bestTimes'] as Map).map((k, v) => MapEntry(k as String, v as int)),
+      );
+      stats.startedByDifficulty.addAll(
+        ((j['startedByDifficulty'] as Map?) ?? const {})
+            .map((k, v) => MapEntry(k as String, v as int)),
+      );
+      stats.completedByDifficulty.addAll(
+        ((j['completedByDifficulty'] as Map?) ?? const {})
+            .map((k, v) => MapEntry(k as String, v as int)),
       );
     } catch (_) {}
     return stats;

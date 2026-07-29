@@ -26,6 +26,7 @@ class _HubScreenState extends State<HubScreen> {
   SudokuGame? saved;
   SudokuStats stats = SudokuStats();
   int best2048 = 0;
+  List<int> scoreHistory2048 = const [];
   bool loading = true;
   int selectedTab = 0;
 
@@ -39,6 +40,7 @@ class _HubScreenState extends State<HubScreen> {
     saved = await widget.repository.loadGame();
     stats = await widget.repository.loadStats();
     best2048 = await widget.game2048Repository.bestScore();
+    scoreHistory2048 = await widget.game2048Repository.scoreHistory();
     if (mounted) setState(() => loading = false);
     if (!await widget.repository.tutorialSeen() && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
@@ -99,7 +101,11 @@ class _HubScreenState extends State<HubScreen> {
           _load();
         },
       ),
-      _StatsTab(stats: stats, best2048: best2048),
+      _StatsTab(
+        stats: stats,
+        best2048: best2048,
+        scoreHistory: scoreHistory2048,
+      ),
       _SettingsTab(
         onThemeChanged: widget.onThemeChanged,
         onShowTutorial: _showTutorial,
@@ -418,28 +424,6 @@ class _Game2048Card extends StatelessWidget {
   }
 }
 
-class _GameIconBadge extends StatelessWidget {
-  const _GameIconBadge({
-    required this.icon,
-    required this.background,
-    required this.foreground,
-  });
-  final IconData icon;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 56,
-    height: 56,
-    decoration: BoxDecoration(
-      color: background,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Icon(icon, color: foreground, size: 28),
-  );
-}
-
 class _GameImageBadge extends StatelessWidget {
   const _GameImageBadge({
     required this.assetPath,
@@ -469,20 +453,21 @@ class _GameImageBadge extends StatelessWidget {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  TAB 2 ─ THÀNH TÍCH
+//  TAB 2 ─ THÀNH TÍCH (dạng biểu đồ)
 // ───────────────────────────────────────────────────────────────────────────
 
 class _StatsTab extends StatelessWidget {
-  const _StatsTab({required this.stats, required this.best2048});
+  const _StatsTab({
+    required this.stats,
+    required this.best2048,
+    required this.scoreHistory,
+  });
   final SudokuStats stats;
   final int best2048;
+  final List<int> scoreHistory;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final completion = stats.started == 0
-        ? 0
-        : (stats.completed * 100 / stats.started).round();
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
@@ -493,205 +478,678 @@ class _StatsTab extends StatelessWidget {
         const SizedBox(height: 28),
         _SectionLabel('Sudoku'),
         const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        _SudokuOverviewCard(stats: stats),
+        const SizedBox(height: 12),
+        _SudokuDifficultyChart(stats: stats),
+        const SizedBox(height: 12),
+        _SudokuBestTimesChart(stats: stats),
+        const SizedBox(height: 24),
+        _SectionLabel('2048'),
+        const SizedBox(height: 12),
+        _Game2048OverviewCard(best: best2048),
+        const SizedBox(height: 12),
+        _Game2048ScoreChart(history: scoreHistory),
+      ],
+    );
+  }
+}
+
+/// Card tổng quan Sudoku — 3 chỉ số chính.
+class _SudokuOverviewCard extends StatelessWidget {
+  const _SudokuOverviewCard({required this.stats});
+  final SudokuStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final completion = stats.started == 0
+        ? 0
+        : (stats.completed * 100 / stats.started).round();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.insights_rounded, color: colors.primary),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Thống kê',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ],
+                Icon(Icons.insights_rounded, color: colors.primary),
+                const SizedBox(width: 10),
+                Text(
+                  'Tổng quan',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatTile(
-                        label: 'Bắt đầu',
-                        value: '${stats.started}',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatTile(
-                        label: 'Hoàn thành',
-                        value: '${stats.completed}',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatTile(
-                        label: 'Tỉ lệ',
-                        value: '$completion%',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _StatTile(
-                  label: 'Chuỗi tốt nhất',
-                  value: '${stats.bestStreak}',
-                  full: true,
-                ),
-                if (stats.bestTimes.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  Divider(color: colors.outlineVariant),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Kỷ lục thời gian',
-                    style: Theme.of(context).textTheme.titleMedium,
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _MetricCell(
+                    label: 'Bắt đầu',
+                    value: '${stats.started}',
                   ),
-                  const SizedBox(height: 8),
-                  ...stats.bestTimes.entries.map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _diffLabel(e.key),
-                            style: TextStyle(color: colors.onSurfaceVariant),
-                          ),
-                          Text(
-                            _formatTime(e.value),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ],
-                      ),
+                ),
+                Expanded(
+                  child: _MetricCell(
+                    label: 'Hoàn thành',
+                    value: '${stats.completed}',
+                  ),
+                ),
+                Expanded(
+                  child: _MetricCell(
+                    label: 'Tỉ lệ',
+                    value: '$completion%',
+                  ),
+                ),
+                Expanded(
+                  child: _MetricCell(
+                    label: 'Streak',
+                    value: '${stats.bestStreak}',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Biểu đồ cột: số ván bắt đầu / hoàn thành theo từng độ khó Sudoku.
+class _SudokuDifficultyChart extends StatelessWidget {
+  const _SudokuDifficultyChart({required this.stats});
+  final SudokuStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final entries = <_ChartEntry>[
+      for (final d in Difficulty.values)
+        _ChartEntry(
+          label: d.label,
+          started: stats.startedByDifficulty[d.name] ?? 0,
+          completed: stats.completedByDifficulty[d.name] ?? 0,
+        ),
+    ];
+    final hasData = entries.any((e) => e.started > 0 || e.completed > 0);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bar_chart_rounded, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Ván theo độ khó',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                _LegendDot(color: colors.primary, label: 'Bắt đầu'),
+                const SizedBox(width: 8),
+                _LegendDot(
+                  color: colors.tertiary,
+                  label: 'Hoàn thành',
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 180,
+              child: hasData
+                  ? _BarChart(
+                      entries: entries,
+                      primary: colors.primary,
+                      accent: colors.tertiary,
+                      track: colors.surfaceContainer,
+                      labelColor: colors.onSurfaceVariant,
+                      maxValue: _max(entries),
+                    )
+                  : _EmptyChart(
+                      message: 'Chưa có ván Sudoku nào',
+                      icon: Icons.bar_chart_rounded,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _max(List<_ChartEntry> entries) {
+    var m = 1;
+    for (final e in entries) {
+      if (e.started > m) m = e.started;
+      if (e.completed > m) m = e.completed;
+    }
+    return m;
+  }
+}
+
+/// Biểu đồ cột: thời gian kỷ lục theo độ khó (đơn vị giây).
+class _SudokuBestTimesChart extends StatelessWidget {
+  const _SudokuBestTimesChart({required this.stats});
+  final SudokuStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final entries = <_ChartEntry>[
+      for (final d in Difficulty.values)
+        _ChartEntry(
+          label: d.label,
+          started: stats.bestTimes[d.name] ?? 0,
+          completed: 0,
+        ),
+    ];
+    final hasData = entries.any((e) => e.started > 0);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timer_outlined, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Kỷ lục thời gian',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                _LegendDot(color: colors.tertiary, label: 'Giây'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 180,
+              child: hasData
+                  ? _BarChart(
+                      entries: entries,
+                      primary: colors.tertiary,
+                      accent: colors.tertiary,
+                      track: colors.surfaceContainer,
+                      labelColor: colors.onSurfaceVariant,
+                      maxValue: _max(entries),
+                      single: true,
+                      formatValue: (v) => _formatTime(v),
+                    )
+                  : _EmptyChart(
+                      message: 'Chưa hoàn thành ván nào',
+                      icon: Icons.timer_outlined,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _max(List<_ChartEntry> entries) {
+    var m = 1;
+    for (final e in entries) {
+      if (e.started > m) m = e.started;
+    }
+    return m;
+  }
+}
+
+/// Card tổng quan 2048.
+class _Game2048OverviewCard extends StatelessWidget {
+  const _Game2048OverviewCard({required this.best});
+  final int best;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: colors.tertiaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                Icons.crop_square_rounded,
+                color: colors.onTertiaryContainer,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Kỷ lục 2048',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Điểm cao nhất',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '$best',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Biểu đồ cột: lịch sử điểm các ván 2048 gần nhất.
+class _Game2048ScoreChart extends StatelessWidget {
+  const _Game2048ScoreChart({required this.history});
+  final List<int> history;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final entries = <_ChartEntry>[];
+    for (var i = 0; i < history.length; i++) {
+      entries.add(
+        _ChartEntry(
+          label: '${i + 1}',
+          started: history[i],
+          completed: 0,
+        ),
+      );
+    }
+    final hasData = entries.isNotEmpty;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.show_chart_rounded, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Lịch sử điểm',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                _LegendDot(color: colors.tertiary, label: 'Ván ${entries.length}'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 180,
+              child: hasData
+                  ? _BarChart(
+                      entries: entries,
+                      primary: colors.tertiary,
+                      accent: colors.tertiary,
+                      track: colors.surfaceContainer,
+                      labelColor: colors.onSurfaceVariant,
+                      maxValue: _max(entries),
+                      single: true,
+                      formatValue: (v) => '$v',
+                    )
+                  : _EmptyChart(
+                      message: 'Chưa có ván 2048 nào',
+                      icon: Icons.show_chart_rounded,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _max(List<_ChartEntry> entries) {
+    var m = 1;
+    for (final e in entries) {
+      if (e.started > m) m = e.started;
+    }
+    return m;
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+class _MetricCell extends StatelessWidget {
+  const _MetricCell({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
+            color: colors.onSurface,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 6),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ],
+  );
+}
+
+class _ChartEntry {
+  const _ChartEntry({
+    required this.label,
+    required this.started,
+    required this.completed,
+  });
+  final String label;
+  final int started;
+  final int completed;
+}
+
+class _BarChart extends StatelessWidget {
+  const _BarChart({
+    required this.entries,
+    required this.primary,
+    required this.accent,
+    required this.track,
+    required this.labelColor,
+    required this.maxValue,
+    this.single = false,
+    this.formatValue,
+  });
+
+  final List<_ChartEntry> entries;
+  final Color primary;
+  final Color accent;
+  final Color track;
+  final Color labelColor;
+  final int maxValue;
+  final bool single;
+  final String Function(int v)? formatValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            for (final e in entries) ...[
+              Expanded(
+                child: _Bar(
+                  entry: e,
+                  maxValue: maxValue,
+                  primary: primary,
+                  accent: accent,
+                  track: track,
+                  labelColor: labelColor,
+                  single: single,
+                  formatValue: formatValue,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Bar extends StatelessWidget {
+  const _Bar({
+    required this.entry,
+    required this.maxValue,
+    required this.primary,
+    required this.accent,
+    required this.track,
+    required this.labelColor,
+    required this.single,
+    this.formatValue,
+  });
+
+  final _ChartEntry entry;
+  final int maxValue;
+  final Color primary;
+  final Color accent;
+  final Color track;
+  final Color labelColor;
+  final bool single;
+  final String Function(int v)? formatValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final h1 = single ? entry.started : entry.started;
+    final h2 = single ? 0 : entry.completed;
+    final v1 = h1 / maxValue;
+    final v2 = h2 / maxValue;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Số hiển thị trên đầu cột
+          Text(
+            (h1 > 0 ? formatValue?.call(h1) ?? '$h1' : ''),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: labelColor,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 120,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _AnimatedBar(
+                    fraction: v1,
+                    color: primary,
+                    track: track,
+                  ),
+                ),
+                if (!single) ...[
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: _AnimatedBar(
+                      fraction: v2,
+                      color: accent,
+                      track: track,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _SectionLabel('2048'),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: colors.tertiaryContainer,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    Icons.crop_square_rounded,
-                    color: colors.onTertiaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Kỷ lục 2048',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Điểm cao nhất',
-                        style: TextStyle(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '$best2048',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            entry.label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: labelColor,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
-  }
-
-  String _diffLabel(String key) {
-    switch (key) {
-      case 'easy':
-        return 'Dễ';
-      case 'medium':
-        return 'Trung bình';
-      case 'hard':
-        return 'Khó';
-      case 'expert':
-        return 'Chuyên gia';
-      default:
-        return key;
-    }
-  }
-
-  String _formatTime(int seconds) {
-    final m = seconds ~/ 60, s = seconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
-    required this.value,
-    this.full = false,
+class _AnimatedBar extends StatefulWidget {
+  const _AnimatedBar({
+    required this.fraction,
+    required this.color,
+    required this.track,
   });
-  final String label;
-  final String value;
-  final bool full;
+  final double fraction;
+  final Color color;
+  final Color track;
+
+  @override
+  State<_AnimatedBar> createState() => _AnimatedBarState();
+}
+
+class _AnimatedBarState extends State<_AnimatedBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _anim = Tween<double>(begin: 0, end: widget.fraction.clamp(0.0, 1.0))
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fraction != widget.fraction) {
+      _anim = Tween<double>(
+        begin: oldWidget.fraction.clamp(0.0, 1.0),
+        end: widget.fraction.clamp(0.0, 1.0),
+      ).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
+      );
+      _ctrl
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (context, _) {
+            return Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                Container(
+                  height: c.maxHeight,
+                  decoration: BoxDecoration(
+                    color: widget.track,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                Container(
+                  height: c.maxHeight * _anim.value,
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _EmptyChart extends StatelessWidget {
+  const _EmptyChart({required this.message, required this.icon});
+  final String message;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final child = Column(
-      crossAxisAlignment: full ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: colors.onSurfaceVariant,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 36, color: colors.outline),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 13,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: full ? 22 : 24,
-            fontWeight: FontWeight.w800,
-            fontFeatures: const [FontFeature.tabularFigures()],
-            color: colors.onSurface,
-          ),
-        ),
-      ],
-    );
-    if (full) return child;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
+        ],
       ),
-      child: child,
     );
   }
+}
+
+String _formatTime(int seconds) {
+  final m = seconds ~/ 60, s = seconds % 60;
+  return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 }
 
 // ───────────────────────────────────────────────────────────────────────────
