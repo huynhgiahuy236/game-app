@@ -12,6 +12,11 @@ class SudokuViewModel extends ChangeNotifier {
   bool noteMode = false;
   bool autoCleanNotes = true;
   int? feedbackCell;
+  int? lastWrongNumber;
+  bool isHintCell = false;
+  Timer? _feedbackTimer;
+
+  void Function(String message)? onToastMessage;
 
   void startTimer() {
     _timer?.cancel();
@@ -30,6 +35,7 @@ class SudokuViewModel extends ChangeNotifier {
 
   void toggleNotes() {
     noteMode = !noteMode;
+    onToastMessage?.call(noteMode ? 'Ghi chú đã bật' : 'Ghi chú đã tắt');
     notifyListeners();
   }
 
@@ -48,12 +54,44 @@ class SudokuViewModel extends ChangeNotifier {
     } else {
       if (game.solution[index] != number) {
         game.mistakes++;
+        game.history.add(
+          SudokuAction(
+            index,
+            game.values[index],
+            Set<int>.from(game.notes[index] ?? {}),
+            {},
+          ),
+        );
+        game.values[index] = number;
+        game.notes.remove(index);
         feedbackCell = index;
+        isHintCell = false;
         if (game.mistakes >= game.mistakeLimit) game.status = GameStatus.failed;
         _save();
         notifyListeners();
+
+        _feedbackTimer?.cancel();
+        _feedbackTimer = Timer(const Duration(milliseconds: 1200), () {
+          if (feedbackCell == index) {
+            feedbackCell = null;
+            notifyListeners();
+          }
+        });
         return;
       }
+
+      // Correct input!
+      feedbackCell = index;
+      lastWrongNumber = null;
+      isHintCell = false;
+      _feedbackTimer?.cancel();
+      _feedbackTimer = Timer(const Duration(milliseconds: 600), () {
+        if (feedbackCell == index) {
+          feedbackCell = null;
+          notifyListeners();
+        }
+      });
+
       final cleaned = <int, Set<int>>{};
       if (autoCleanNotes) {
         for (final peer in SudokuEngine.peers(index)) {
@@ -81,7 +119,15 @@ class SudokuViewModel extends ChangeNotifier {
 
   void erase() {
     final i = game.selectedCell;
-    if (i == null || game.clues[i] != 0) return;
+    if (i == null || game.clues[i] != 0) {
+      if (i != null && game.clues[i] != 0) {
+        onToastMessage?.call('Ô số ban đầu không thể xóa');
+      }
+      return;
+    }
+    if (game.values[i] == 0 && (game.notes[i]?.isEmpty ?? true)) {
+      return;
+    }
     game.history.add(
       SudokuAction(i, game.values[i], Set<int>.from(game.notes[i] ?? {}), {}),
     );
@@ -92,7 +138,11 @@ class SudokuViewModel extends ChangeNotifier {
   }
 
   void undo() {
-    if (game.history.isEmpty || game.status != GameStatus.playing) return;
+    if (game.history.isEmpty) {
+      onToastMessage?.call('Không thể hoàn tác');
+      return;
+    }
+    if (game.status != GameStatus.playing) return;
     final a = game.history.removeLast();
     game.values[a.index] = a.beforeValue;
     if (a.beforeNotes.isEmpty) {
@@ -108,7 +158,11 @@ class SudokuViewModel extends ChangeNotifier {
   }
 
   void hint() {
-    if (game.hintsUsed >= 3 || game.status != GameStatus.playing) return;
+    if (game.hintsUsed >= 3) {
+      onToastMessage?.call('Không còn lượt gợi ý');
+      return;
+    }
+    if (game.status != GameStatus.playing) return;
     var i = game.selectedCell;
     if (i == null || game.values[i] != 0 || game.clues[i] != 0) {
       i = game.values.indexWhere((v) => v == 0);
@@ -119,6 +173,18 @@ class SudokuViewModel extends ChangeNotifier {
     game.hintsUsed++;
     game.selectedCell = i;
     feedbackCell = i;
+    lastWrongNumber = null;
+    isHintCell = true;
+
+    _feedbackTimer?.cancel();
+    _feedbackTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (feedbackCell == i) {
+        feedbackCell = null;
+        isHintCell = false;
+        notifyListeners();
+      }
+    });
+
     _checkComplete();
     _save();
     notifyListeners();
@@ -166,6 +232,7 @@ class SudokuViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _feedbackTimer?.cancel();
     super.dispose();
   }
 }

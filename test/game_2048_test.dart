@@ -43,4 +43,18 @@ void main() {
     expect(Game2048Model.decode(model.encode())?.score, 42);
     expect(Game2048Model.decode('invalid'), isNull);
   });
+
+  test('supports dynamic board size 5x5 and 6x6', () async {
+    final repository = Game2048Repository();
+    final viewModel = await Game2048ViewModel.create(repository);
+    expect(viewModel.game.size, 4);
+
+    await viewModel.newGame(size: 5);
+    expect(viewModel.game.size, 5);
+    expect(viewModel.game.board.length, 25);
+
+    await viewModel.newGame(size: 6);
+    expect(viewModel.game.size, 6);
+    expect(viewModel.game.board.length, 36);
+  });
 }

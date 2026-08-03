@@ -24,11 +24,19 @@ class Game2048Repository {
   Future<void> save(Game2048Model game) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_gameKey, game.encode());
-    await preferences.setInt(_bestKey, game.bestScore);
+    await preferences.setInt('game2048.best.size.${game.size}', game.bestScore);
+    if (game.size == 4) {
+      await preferences.setInt(_bestKey, game.bestScore);
+    }
   }
 
-  Future<int> bestScore() async =>
-      (await SharedPreferences.getInstance()).getInt(_bestKey) ?? 0;
+  Future<int> bestScore({int size = 4}) async {
+    final preferences = await SharedPreferences.getInstance();
+    final specific = preferences.getInt('game2048.best.size.$size');
+    if (specific != null) return specific;
+    if (size == 4) return preferences.getInt(_bestKey) ?? 0;
+    return 0;
+  }
 
   /// Lưu điểm cuối mỗi ván để hiển thị trong tab Thành tích.
   Future<void> recordFinalScore(int score) async {

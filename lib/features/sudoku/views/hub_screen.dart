@@ -87,15 +87,49 @@ class _HubScreenState extends State<HubScreen>
   }
 
   Future<void> _chooseDifficulty() async {
+    final lastDifficulty = await widget.repository.loadLastDifficulty();
+    if (!mounted) return;
     final difficulty = await showModalBottomSheet<Difficulty>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => const _DifficultySheet(),
+      builder: (context) => SudokuDifficultySheet(
+        initialDifficulty: lastDifficulty,
+        stats: stats,
+      ),
     );
     if (difficulty != null && mounted) {
-      await SudokuGameScreen.startNew(
-          context, widget.repository, difficulty);
-      _load();
+      await widget.repository.saveLastDifficulty(difficulty);
+      if (mounted) {
+        await SudokuGameScreen.startNew(
+            context, widget.repository, difficulty);
+        _load();
+      }
+    }
+  }
+
+  Future<void> _handleSudokuPlay() async {
+    if (saved != null) {
+      final choice = await showModalBottomSheet<_SudokuStartChoice>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => _ContinueOrNewGameSheet(saved: saved!),
+      );
+      if (choice == _SudokuStartChoice.continueGame && mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SudokuGameScreen(
+              repository: widget.repository,
+              initialGame: saved!,
+            ),
+          ),
+        );
+        _load();
+      } else if (choice == _SudokuStartChoice.newGame && mounted) {
+        await _chooseDifficulty();
+      }
+    } else {
+      await _chooseDifficulty();
     }
   }
 
@@ -108,20 +142,7 @@ class _HubScreenState extends State<HubScreen>
         saved: saved,
         best2048: best2048,
         onSudokuNew: _chooseDifficulty,
-        onSudokuContinue: saved == null
-            ? null
-            : () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SudokuGameScreen(
-                      repository: widget.repository,
-                      initialGame: saved!,
-                    ),
-                  ),
-                );
-                _load();
-              },
+        onSudokuContinue: saved == null ? null : _handleSudokuPlay,
         onPlay2048: () async {
           await Navigator.push(
             context,
@@ -2654,15 +2675,11 @@ String _formatTime(int seconds) {
 //  Difficulty Sheet + Tutorial Sheet
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _DifficultySheet extends StatefulWidget {
-  const _DifficultySheet();
+enum _SudokuStartChoice { continueGame, newGame }
 
-  @override
-  State<_DifficultySheet> createState() => _DifficultySheetState();
-}
-
-class _DifficultySheetState extends State<_DifficultySheet> {
-  Difficulty selected = Difficulty.easy;
+class _ContinueOrNewGameSheet extends StatelessWidget {
+  const _ContinueOrNewGameSheet({required this.saved});
+  final SudokuGame saved;
 
   @override
   Widget build(BuildContext context) {
@@ -2671,75 +2688,259 @@ class _DifficultySheetState extends State<_DifficultySheet> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: Text('Chọn độ khó',
-                  style: Theme.of(context).textTheme.headlineMedium),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 12),
-              child: Text(
-                'Bạn luôn có thể quay lại và chọn mức khác.',
-                style: TextStyle(color: colors.onSurfaceVariant),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Tiếp tục ván chơi?',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Bạn đang có một ván Sudoku chưa hoàn thành.',
+              style: TextStyle(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF141B2D) : colors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.grid_3x3_rounded, color: colors.primary),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Độ khó: ${saved.difficulty.label}',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Thời gian: ${formatTime(saved.elapsedSeconds)} • Lỗi: ${saved.mistakes}/${saved.mistakeLimit}',
+                          style: TextStyle(color: colors.onSurfaceVariant, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, _SudokuStartChoice.continueGame),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Tiếp tục ván đang chơi', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pop(context, _SudokuStartChoice.newGame),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                side: BorderSide(color: colors.outlineVariant),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Chơi ván mới', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SudokuDifficultySheet extends StatefulWidget {
+  const SudokuDifficultySheet({
+    super.key,
+    this.initialDifficulty = Difficulty.easy,
+    this.stats,
+  });
+  final Difficulty initialDifficulty;
+  final SudokuStats? stats;
+
+  @override
+  State<SudokuDifficultySheet> createState() => _SudokuDifficultySheetState();
+}
+
+class _SudokuDifficultySheetState extends State<SudokuDifficultySheet> {
+  late Difficulty selected;
+
+  @override
+  void initState() {
+    super.initState();
+    selected = widget.initialDifficulty;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Chọn độ khó',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
             const SizedBox(height: 4),
+            Text(
+              'Chọn cấp độ phù hợp để bắt đầu ván mới.',
+              style: TextStyle(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
             ...Difficulty.values.map(
-              (d) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  color: selected == d
-                      ? colors.primaryContainer
-                      : (isDark
-                          ? const Color(0xFF141B2D)
-                          : colors.surfaceContainer),
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => setState(() => selected = d),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      child: Row(
-                        children: [
-                          Icon(
-                            selected == d
-                                ? Icons.radio_button_checked_rounded
-                                : Icons.radio_button_unchecked_rounded,
-                            color: selected == d
-                                ? colors.primary
-                                : colors.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(d.label,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700)),
-                                Text(d.description,
-                                    style: TextStyle(
+              (d) {
+                final isSelected = selected == d;
+                final bestTime = widget.stats?.bestTimes[d.name];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? colors.primaryContainer.withValues(alpha: isDark ? 0.4 : 0.8)
+                          : (isDark ? const Color(0xFF141B2D) : colors.surfaceContainer),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? colors.primary : colors.outlineVariant.withValues(alpha: 0.5),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => setState(() => selected = d),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_unchecked_rounded,
+                                color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          d.label,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 16,
+                                            color: isSelected ? colors.primary : colors.onSurface,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          d.challengeStars,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFFF59E0B),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      d.description,
+                                      style: TextStyle(
                                         color: colors.onSurfaceVariant,
-                                        fontSize: 13)),
-                              ],
-                            ),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    if (bestTime != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Kỷ lục: ${formatTime(bestTime)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: colors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () => Navigator.pop(context, selected),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
               child: const Text('Bắt đầu'),
             ),
           ],

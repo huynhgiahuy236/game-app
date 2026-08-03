@@ -5,6 +5,7 @@ enum MoveDirection { up, down, left, right }
 class Game2048Model {
   Game2048Model({
     required this.board,
+    this.size = 4,
     this.score = 0,
     this.bestScore = 0,
     this.moves = 0,
@@ -13,7 +14,8 @@ class Game2048Model {
     this.keepPlaying = false,
   });
 
-  final List<int> board;
+  List<int> board;
+  int size;
   int score;
   int bestScore;
   int moves;
@@ -22,7 +24,8 @@ class Game2048Model {
   bool keepPlaying;
 
   Map<String, dynamic> toJson() => {
-    'schemaVersion': 1,
+    'schemaVersion': 2,
+    'size': size,
     'board': board,
     'score': score,
     'bestScore': bestScore,
@@ -38,13 +41,17 @@ class Game2048Model {
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       final board = (json['board'] as List).cast<int>();
-      if (json['schemaVersion'] != 1 ||
-          board.length != 16 ||
+      final size = (json['size'] as int?) ?? 4;
+      final schema = json['schemaVersion'] as int?;
+      if ((schema != 1 && schema != 2) ||
+          (size != 4 && size != 5 && size != 6) ||
+          board.length != size * size ||
           board.any((v) => v < 0 || (v != 0 && (v & (v - 1)) != 0))) {
         return null;
       }
       return Game2048Model(
         board: board,
+        size: size,
         score: json['score'] as int,
         bestScore: json['bestScore'] as int,
         moves: json['moves'] as int,

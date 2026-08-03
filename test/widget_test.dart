@@ -7,7 +7,8 @@ void main() {
   testWidgets('hub renders game entry', (tester) async {
     SharedPreferences.setMockInitialValues({'sudoku.tutorial.v1': true});
     await tester.pumpWidget(const GameApp());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Sudoku'), findsOneWidget);
     expect(find.text('2048'), findsOneWidget);
     expect(find.text('Trò chơi'), findsOneWidget);
@@ -21,9 +22,11 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const GameApp());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.text('2048'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Ghép số. Giữ nhịp. Tiến xa.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

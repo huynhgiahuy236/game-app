@@ -5,13 +5,14 @@ enum Difficulty { easy, medium, hard, expert }
 enum GameStatus { playing, paused, completed, failed }
 
 extension DifficultyText on Difficulty {
-  String get label => const ['Dễ', 'Vừa', 'Khó', 'Chuyên gia'][index];
+  String get label => const ['Dễ', 'Trung bình', 'Khó', 'Chuyên gia'][index];
   String get description => const [
-    'Khởi động nhẹ nhàng',
-    'Cân bằng và thư thái',
-    'Cần suy luận nhiều bước',
-    'Thử thách sâu nhất',
+    'Thư giãn với nhiều số ban đầu',
+    'Lối chơi cân bằng',
+    'Ít gợi ý, cần suy luận nâng cao',
+    'Thử thách dành cho cao thủ',
   ][index];
+  String get challengeStars => const ['★☆☆☆', '★★☆☆', '★★★☆', '★★★★'][index];
 }
 
 class SudokuPuzzle {
@@ -73,6 +74,14 @@ class SudokuGame {
       values.every((value) => value != 0) &&
       List.generate(81, (i) => values[i] == solution[i]).every((v) => v);
 
+  bool get hasProgress {
+    for (var i = 0; i < 81; i++) {
+      if (clues[i] == 0 && values[i] != 0) return true;
+      if (notes[i]?.isNotEmpty ?? false) return true;
+    }
+    return mistakes > 0 || elapsedSeconds > 10;
+  }
+
   Map<String, dynamic> toJson() => {
     'schemaVersion': 1,
     'gameId': gameId,
@@ -90,6 +99,12 @@ class SudokuGame {
     'selectedCell': selectedCell,
     'createdAt': createdAt.toIso8601String(),
     'lastUpdatedAt': DateTime.now().toIso8601String(),
+    'history': history.map((a) => {
+      'index': a.index,
+      'beforeValue': a.beforeValue,
+      'beforeNotes': a.beforeNotes.toList(),
+      'cleanedNotes': a.cleanedNotes.map((k, v) => MapEntry('$k', v.toList())),
+    }).toList(),
   };
 
   String encode() => jsonEncode(toJson());
@@ -104,7 +119,7 @@ class SudokuGame {
       if (clues.length != 81 || values.length != 81 || solution.length != 81) {
         return null;
       }
-      return SudokuGame(
+      final game = SudokuGame(
         gameId: j['gameId'] as String,
         puzzleId: j['puzzleId'] as String,
         difficulty: Difficulty.values.byName(j['difficulty'] as String),
@@ -122,6 +137,20 @@ class SudokuGame {
         selectedCell: j['selectedCell'] as int?,
         createdAt: DateTime.parse(j['createdAt'] as String),
       );
+      if (j['history'] != null) {
+        for (final item in j['history'] as List) {
+          final m = item as Map<String, dynamic>;
+          game.history.add(SudokuAction(
+            m['index'] as int,
+            m['beforeValue'] as int,
+            Set<int>.from(m['beforeNotes'] as List),
+            (m['cleanedNotes'] as Map<String, dynamic>).map(
+              (k, v) => MapEntry(int.parse(k), Set<int>.from(v as List)),
+            ),
+          ));
+        }
+      }
+      return game;
     } catch (_) {
       return null;
     }

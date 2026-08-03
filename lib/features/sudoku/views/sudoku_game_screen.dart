@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/sudoku_models.dart';
 import '../services/sudoku_engine.dart';
 import '../services/sudoku_repository.dart';
 import '../viewmodels/sudoku_view_model.dart';
+import 'hub_screen.dart';
 
 class SudokuGameScreen extends StatefulWidget {
   const SudokuGameScreen({
@@ -55,13 +57,35 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   final FocusNode focusNode = FocusNode();
   bool completionRecorded = false;
 
+  bool _isDoubleBackWaiting = false;
+  Timer? _doubleBackTimer;
+  String? _toastMessage;
+  Timer? _toastTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     controller = SudokuViewModel(widget.repository, widget.initialGame)
       ..startTimer();
+    controller.onToastMessage = _showToast;
     controller.addListener(_changed);
+  }
+
+  void _showToast(String message) {
+    _toastTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _toastMessage = message;
+      });
+    }
+    _toastTimer = Timer(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        setState(() {
+          _toastMessage = null;
+        });
+      }
+    });
   }
 
   void _changed() {
@@ -93,6 +117,8 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
 
   @override
   void dispose() {
+    _doubleBackTimer?.cancel();
+    _toastTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     controller.removeListener(_changed);
     controller.dispose();
@@ -100,27 +126,88 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     super.dispose();
   }
 
-  Future<bool> _confirmExit() async =>
-      await showDialog<bool>(
+  Future<void> _handleBackPress() async {
+    if (controller.game.status == GameStatus.paused) {
+      controller.resume();
+      return;
+    }
+    if (_isDoubleBackWaiting) {
+      _doubleBackTimer?.cancel();
+      _isDoubleBackWaiting = false;
+      await widget.repository.saveGame(controller.game);
+      if (mounted) Navigator.pop(context);
+    } else {
+      await widget.repository.saveGame(controller.game);
+      _showToast('Nhấn lần nữa để thoát');
+      _isDoubleBackWaiting = true;
+      _doubleBackTimer?.cancel();
+      _doubleBackTimer = Timer(const Duration(milliseconds: 2000), () {
+        _isDoubleBackWaiting = false;
+      });
+    }
+  }
+
+  Future<void> _handleNewGameRequest() async {
+    if (!controller.game.hasProgress) {
+      await _openDifficultySheetAndStartNew();
+    } else {
+      final choice = await showModalBottomSheet<_NewGameConfirmChoice>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Rời ván chơi?'),
-          content: const Text(
-            'Tiến trình đã được lưu tự động. Bạn có thể tiếp tục bất cứ lúc nào.',
+        isScrollControlled: true,
+        builder: (ctx) => const _NewGameConfirmationSheet(),
+      );
+      if (choice == _NewGameConfirmChoice.startNew && mounted) {
+        await Future.delayed(const Duration(milliseconds: 150));
+        if (mounted) {
+          await _openDifficultySheetAndStartNew();
+        }
+      }
+    }
+  }
+
+  Future<void> _openDifficultySheetAndStartNew() async {
+    final lastDifficulty = await widget.repository.loadLastDifficulty();
+    final stats = await widget.repository.loadStats();
+    if (!mounted) return;
+    final difficulty = await showModalBottomSheet<Difficulty>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SudokuDifficultySheet(
+        initialDifficulty: lastDifficulty,
+        stats: stats,
+      ),
+    );
+    if (difficulty != null && mounted) {
+      await widget.repository.saveLastDifficulty(difficulty);
+      final puzzle = PuzzleBank.forDifficulty(difficulty);
+      final newGame = SudokuGame(
+        gameId: DateTime.now().microsecondsSinceEpoch.toString(),
+        puzzleId: puzzle.id,
+        difficulty: difficulty,
+        clues: List.from(puzzle.clues),
+        values: List.from(puzzle.clues),
+        solution: List.from(puzzle.solution),
+        createdAt: DateTime.now(),
+      );
+      stats.started++;
+      stats.startedByDifficulty[difficulty.name] =
+          (stats.startedByDifficulty[difficulty.name] ?? 0) + 1;
+      await widget.repository.saveStats(stats);
+      await widget.repository.saveGame(newGame);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SudokuGameScreen(
+              repository: widget.repository,
+              initialGame: newGame,
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Ở lại'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Rời đi'),
-            ),
-          ],
-        ),
-      ) ??
-      false;
+        );
+      }
+    }
+  }
 
   KeyEventResult _key(FocusNode _, KeyEvent event) {
     if (event is! KeyDownEvent) {
@@ -176,9 +263,9 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     final game = controller.game;
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (!didPop && await _confirmExit() && context.mounted) {
-          Navigator.pop(context);
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _handleBackPress();
         }
       },
       child: Scaffold(
@@ -192,12 +279,8 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                 Column(
                   children: [
                     SudokuTopBar(
-                      game: game,
-                      onBack: () async {
-                        if (await _confirmExit() && context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      },
+                      controller: controller,
+                      onBack: _handleBackPress,
                       onPause: controller.pause,
                     ),
                     Expanded(
@@ -205,7 +288,10 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                         builder: (context, c) {
                           final wide = c.maxWidth >= 820;
                           final board = SudokuBoard(controller: controller);
-                          final controls = SudokuControls(controller: controller);
+                          final controls = SudokuControls(
+                            controller: controller,
+                            onNewGame: _handleNewGameRequest,
+                          );
                           return SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                             child: Center(
@@ -236,13 +322,13 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                     ),
                   ],
                 ),
+                _SudokuToastBanner(message: _toastMessage),
                 if (game.status == GameStatus.paused)
                   SudokuPauseOverlay(
                     onResume: controller.resume,
                     onExit: () async {
-                      if (await _confirmExit() && context.mounted) {
-                        Navigator.pop(context);
-                      }
+                      await widget.repository.saveGame(controller.game);
+                      if (context.mounted) Navigator.pop(context);
                     },
                   ),
                 if (game.status == GameStatus.failed)
@@ -287,16 +373,17 @@ String formatTime(int seconds) {
 class SudokuTopBar extends StatelessWidget {
   const SudokuTopBar({
     super.key,
-    required this.game,
+    required this.controller,
     required this.onBack,
     required this.onPause,
   });
-  final SudokuGame game;
+  final SudokuViewModel controller;
   final VoidCallback onBack;
   final VoidCallback onPause;
 
   @override
   Widget build(BuildContext context) {
+    final game = controller.game;
     final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
@@ -337,7 +424,13 @@ class SudokuTopBar extends StatelessWidget {
             ),
             _TimerChip(seconds: game.elapsedSeconds),
             const SizedBox(width: 8),
-            _MistakeChip(mistakes: game.mistakes, limit: game.mistakeLimit),
+            _MistakeChip(
+              mistakes: game.mistakes,
+              limit: game.mistakeLimit,
+              isErrorActive: (controller.feedbackCell != null &&
+                  game.values[controller.feedbackCell!] != 0 &&
+                  game.values[controller.feedbackCell!] != game.solution[controller.feedbackCell!]),
+            ),
             const SizedBox(width: 4),
             IconButton(
               tooltip: 'Tạm dừng',
@@ -358,12 +451,13 @@ class _TimerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHigh,
+        color: isDark ? const Color(0xFF141B2D) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
+        border: Border.all(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -394,19 +488,37 @@ class _TimerChip extends StatelessWidget {
 }
 
 class _MistakeChip extends StatelessWidget {
-  const _MistakeChip({required this.mistakes, required this.limit});
+  const _MistakeChip({
+    required this.mistakes,
+    required this.limit,
+    this.isErrorActive = false,
+  });
   final int mistakes;
   final int limit;
+  final bool isErrorActive;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Container(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bg = isErrorActive
+        ? (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEE2E2))
+        : (isDark ? const Color(0xFF141B2D) : Colors.white);
+    final fg = isErrorActive
+        ? const Color(0xFFDC2626)
+        : colors.onSurface;
+    final border = isErrorActive
+        ? Border.all(color: const Color(0xFFEF4444), width: 1.5)
+        : Border.all(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7));
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHigh,
+        color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
+        border: border,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -416,7 +528,7 @@ class _MistakeChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: colors.onSurfaceVariant,
+              color: isErrorActive ? const Color(0xFFDC2626) : colors.onSurfaceVariant,
               letterSpacing: 0.6,
             ),
           ),
@@ -427,7 +539,7 @@ class _MistakeChip extends StatelessWidget {
               fontWeight: FontWeight.w800,
               fontSize: 14,
               fontFeatures: const [FontFeature.tabularFigures()],
-              color: colors.onSurface,
+              color: fg,
             ),
           ),
         ],
@@ -437,7 +549,79 @@ class _MistakeChip extends StatelessWidget {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Bảng Sudoku — border chuẩn, viền đậm 3×3 chính xác
+//  Shake Widget — hiệu ứng rung nhẹ khi điền sai
+// ───────────────────────────────────────────────────────────────────────────
+class ShakeWidget extends StatefulWidget {
+  const ShakeWidget({
+    super.key,
+    required this.child,
+    required this.shake,
+    this.deltaX = 8.0,
+    this.duration = const Duration(milliseconds: 350),
+  });
+
+  final Widget child;
+  final bool shake;
+  final double deltaX;
+  final Duration duration;
+
+  @override
+  State<ShakeWidget> createState() => _ShakeWidgetState();
+}
+
+class _ShakeWidgetState extends State<ShakeWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: widget.duration, vsync: this);
+    _offsetAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: -1.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -1.0, end: 1.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: -0.5), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.5, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    if (widget.shake) {
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void didUpdateWidget(ShakeWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shake && !oldWidget.shake) {
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _offsetAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_offsetAnimation.value * widget.deltaX, 0),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+//  Bảng Sudoku — chuẩn màu sắc semantic, ưu tiên hiển thị & rung khi sai
 // ───────────────────────────────────────────────────────────────────────────
 
 class SudokuBoard extends StatelessWidget {
@@ -449,6 +633,7 @@ class SudokuBoard extends StatelessWidget {
     final g = controller.game;
     final selected = g.selectedCell;
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
       child: ConstrainedBox(
@@ -457,13 +642,18 @@ class SudokuBoard extends StatelessWidget {
           aspectRatio: 1,
           child: Container(
             decoration: BoxDecoration(
-              color: colors.surfaceContainerHighest,
+              color: isDark ? const Color(0xFF141B2D) : Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: colors.outlineVariant, width: 2),
+              border: Border.all(
+                color: isDark ? const Color(0xFF3B4866) : const Color(0xFFB9C1D5),
+                width: 2.0,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: colors.shadow.withValues(alpha: 0.2),
-                  blurRadius: 16,
+                  color: isDark
+                      ? colors.primary.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
                   offset: const Offset(0, 6),
                 ),
               ],
@@ -483,6 +673,12 @@ class SudokuBoard extends StatelessWidget {
                   final fixed = g.clues[i] != 0;
                   final isSelected = i == selected;
                   final sel = selected;
+
+                  final isErrorCell = (!fixed && value != 0 && value != g.solution[i]);
+                  final isShakeActive = (controller.feedbackCell == i && isErrorCell);
+                  final isHintPulse = (controller.feedbackCell == i && controller.isHintCell);
+                  final isCorrectPulse = (controller.feedbackCell == i && !controller.isHintCell && !isErrorCell);
+
                   final same = sel != null &&
                       value != 0 &&
                       value == g.values[sel];
@@ -493,67 +689,100 @@ class SudokuBoard extends StatelessWidget {
                           (r ~/ 3 == sel ~/ 9 ~/ 3 &&
                               c ~/ 3 == sel % 9 ~/ 3));
 
+                  // Priority color mapping
                   Color bg;
-                  if (isSelected) {
-                    bg = colors.primary;
+                  BorderSide cellBorder = BorderSide.none;
+                  Color textColor;
+
+                  if (isErrorCell) {
+                    bg = isDark ? const Color(0xFF451A1A) : const Color(0xFFFEE2E2);
+                    cellBorder = const BorderSide(color: Color(0xFFDC2626), width: 2.0);
+                    textColor = const Color(0xFFDC2626);
+                  } else if (isHintPulse) {
+                    bg = isDark ? const Color(0xFF134E4A) : const Color(0xFFCCFBF1);
+                    cellBorder = BorderSide(color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F8A72), width: 1.5);
+                    textColor = isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F8A72);
+                  } else if (isCorrectPulse) {
+                    bg = isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7);
+                    cellBorder = const BorderSide(color: Color(0xFF15803D), width: 1.5);
+                    textColor = const Color(0xFF15803D);
+                  } else if (isSelected) {
+                    bg = isDark ? const Color(0xFF2E1B4E) : const Color(0xFFEDE9FE);
+                    cellBorder = BorderSide(color: isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9), width: 2.0);
+                    textColor = fixed
+                        ? (isDark ? const Color(0xFFF3F4F8) : const Color(0xFF181620))
+                        : (isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9));
                   } else if (same) {
-                    bg = colors.primaryContainer;
+                    bg = isDark ? const Color(0xFF2A2045) : const Color(0xFFDDD6FE);
+                    cellBorder = BorderSide(color: isDark ? const Color(0xFF7C3AED) : const Color(0xFFC4B5FD), width: 1.0);
+                    textColor = fixed
+                        ? (isDark ? const Color(0xFFF3F4F8) : const Color(0xFF181620))
+                        : (isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9));
                   } else if (related) {
-                    bg = colors.surfaceContainerHigh;
+                    bg = isDark ? const Color(0xFF191D33) : const Color(0xFFF5F3FF);
+                    textColor = fixed
+                        ? (isDark ? const Color(0xFFF3F4F8) : const Color(0xFF181620))
+                        : (isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9));
                   } else {
-                    bg = colors.surfaceContainerLow;
+                    bg = isDark ? const Color(0xFF141B2D) : Colors.white;
+                    textColor = fixed
+                        ? (isDark ? const Color(0xFFF3F4F8) : const Color(0xFF181620))
+                        : (isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9));
                   }
 
-                  // ── Single Border calculation (Bỏ hoàn toàn border trùng) ──
-                  final BorderSide? topSide = r == 0
-                      ? null
+                  // ── Standard Grid Lines (Major 3x3 vs Minor 1x1) ──
+                  final BorderSide topSide = r == 0
+                      ? BorderSide.none
                       : r % 3 == 0
-                          ? BorderSide(color: colors.outline, width: 1.5)
-                          : BorderSide(color: colors.outlineVariant.withValues(alpha: 0.4), width: 0.5);
+                          ? BorderSide(color: isDark ? const Color(0xFF64748B) : const Color(0xFF7180A0), width: 1.8)
+                          : BorderSide(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFE1E4EC), width: 0.8);
 
-                  final BorderSide? leftSide = c == 0
-                      ? null
+                  final BorderSide leftSide = c == 0
+                      ? BorderSide.none
                       : c % 3 == 0
-                          ? BorderSide(color: colors.outline, width: 1.5)
-                          : BorderSide(color: colors.outlineVariant.withValues(alpha: 0.4), width: 0.5);
+                          ? BorderSide(color: isDark ? const Color(0xFF64748B) : const Color(0xFF7180A0), width: 1.8)
+                          : BorderSide(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFE1E4EC), width: 0.8);
+
+                  final displayValue = value;
 
                   return Semantics(
                     button: true,
                     selected: isSelected,
                     label:
-                        'Hàng ${r + 1}, cột ${c + 1}, ${fixed ? "ô cố định" : "ô có thể sửa"}, ${value == 0 ? "trống" : "giá trị $value"}',
+                        'Hàng ${r + 1}, cột ${c + 1}, ${fixed ? "ô cố định" : "ô có thể sửa"}, ${displayValue == 0 ? "trống" : "giá trị $displayValue"}',
                     child: InkWell(
                       onTap: () => controller.select(i),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 140),
-                        curve: Curves.easeOutCubic,
-                        decoration: BoxDecoration(
-                          color: bg,
-                          border: Border(
-                            top: topSide ?? BorderSide.none,
-                            left: leftSide ?? BorderSide.none,
+                      child: ShakeWidget(
+                        shake: isShakeActive,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          curve: Curves.easeOutCubic,
+                          decoration: BoxDecoration(
+                            color: bg,
+                            border: Border(
+                              top: topSide,
+                              left: leftSide,
+                              right: cellBorder != BorderSide.none ? cellBorder : BorderSide.none,
+                              bottom: cellBorder != BorderSide.none ? cellBorder : BorderSide.none,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: value != 0
-                              ? Text(
-                                  '$value',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: fixed
-                                        ? FontWeight.w800
-                                        : FontWeight.w700,
-                                    color: isSelected
-                                        ? colors.onPrimary
-                                        : fixed
-                                            ? colors.onSurface
-                                            : colors.primary,
+                          child: Center(
+                            child: displayValue != 0
+                                ? Text(
+                                    '$displayValue',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: (fixed || isErrorCell)
+                                          ? FontWeight.w800
+                                          : FontWeight.w700,
+                                      color: textColor,
+                                    ),
+                                  )
+                                : _SudokuCellNotes(
+                                    notes: g.notes[i] ?? {},
+                                    active: isSelected,
                                   ),
-                                )
-                              : _SudokuCellNotes(
-                                  notes: g.notes[i] ?? {},
-                                  active: isSelected,
-                                ),
+                          ),
                         ),
                       ),
                     ),
@@ -606,8 +835,13 @@ class _SudokuCellNotes extends StatelessWidget {
 // ───────────────────────────────────────────────────────────────────────────
 
 class SudokuControls extends StatelessWidget {
-  const SudokuControls({super.key, required this.controller});
+  const SudokuControls({
+    super.key,
+    required this.controller,
+    required this.onNewGame,
+  });
   final SudokuViewModel controller;
+  final VoidCallback onNewGame;
 
   @override
   Widget build(BuildContext context) {
@@ -690,33 +924,13 @@ class SudokuControls extends StatelessWidget {
         const SizedBox(height: 12),
 
         // ── Nút "Trò chơi Mới" có xác nhận ─────────────────────────────
-        FilledButton.icon(
-          onPressed: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Bắt đầu ván mới?'),
-                content: const Text(
-                  'Tiến trình của ván Sudoku hiện tại sẽ được thay thế.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Hủy'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Ván mới'),
-                  ),
-                ],
-              ),
-            ) ?? false;
-            if (confirmed) controller.retry();
-          },
-          style: FilledButton.styleFrom(
+        OutlinedButton.icon(
+          onPressed: onNewGame,
+          style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(44),
-            backgroundColor: colors.primary,
-            foregroundColor: colors.onPrimary,
+            side: BorderSide(color: colors.primary, width: 1.5),
+            foregroundColor: colors.primary,
+            backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141B2D) : Colors.white,
             textStyle: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -725,7 +939,6 @@ class SudokuControls extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            elevation: 1,
           ),
           icon: const Icon(Icons.refresh_rounded, size: 18),
           label: const Text('Trò chơi Mới'),
@@ -750,20 +963,25 @@ class _SudokuNumberKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final bg = completed
-        ? colors.surfaceContainerLow.withValues(alpha: 0.5)
+        ? (isDark ? const Color(0xFF0D1326) : const Color(0xFFF3F4F8))
         : matched
-            ? colors.primaryContainer
-            : colors.surfaceContainerHigh;
+            ? (isDark ? const Color(0xFF3B1F6E) : const Color(0xFFEDE9FE))
+            : (isDark ? const Color(0xFF141B2D) : Colors.white);
+
     final fg = completed
-        ? colors.onSurfaceVariant.withValues(alpha: 0.35)
+        ? (isDark ? const Color(0xFF4B5478) : const Color(0xFF9CA3AF))
         : matched
-            ? colors.onPrimaryContainer
-            : colors.onSurface;
+            ? (isDark ? const Color(0xFFEDE9FE) : const Color(0xFF6D28D9))
+            : (isDark ? const Color(0xFFE8E6FF) : const Color(0xFF181620));
+
     final border = matched
-        ? Border.all(color: colors.primary, width: 1.5)
-        : Border.all(color: colors.outlineVariant, width: 1.0);
+        ? Border.all(color: isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9), width: 1.5)
+        : completed
+            ? Border.all(color: isDark ? const Color(0xFF1F2638) : const Color(0xFFE5E7EB))
+            : Border.all(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7));
 
     return Material(
       color: Colors.transparent,
@@ -800,7 +1018,7 @@ class _SudokuNumberKey extends StatelessWidget {
                 Icon(
                   Icons.check_rounded,
                   size: 14,
-                  color: colors.onSurfaceVariant.withValues(alpha: 0.35),
+                  color: fg,
                 ),
               ],
             ],
@@ -826,21 +1044,26 @@ class _SudokuToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final disabled = onTap == null;
-    final fg = disabled
-        ? colors.onSurfaceVariant.withValues(alpha: 0.35)
-        : active
-            ? colors.onPrimary
-            : colors.primary;
+
     final bg = disabled
-        ? colors.surfaceContainerLow
+        ? (isDark ? const Color(0xFF0D1326) : const Color(0xFFF3F4F8))
         : active
-            ? colors.primary
-            : colors.surfaceContainerHigh;
+            ? (isDark ? const Color(0xFF3B1F6E) : const Color(0xFFEDE9FE))
+            : (isDark ? const Color(0xFF141B2D) : Colors.white);
+
+    final fg = disabled
+        ? (isDark ? const Color(0xFF4B5478) : const Color(0xFF9CA3AF))
+        : active
+            ? (isDark ? const Color(0xFFEDE9FE) : const Color(0xFF6D28D9))
+            : (isDark ? const Color(0xFFE8E6FF) : const Color(0xFF181620));
+
     final border = active
-        ? Border.all(color: colors.primary, width: 1.5)
-        : Border.all(color: colors.outlineVariant);
+        ? Border.all(color: isDark ? const Color(0xFFA78BFA) : const Color(0xFF6D28D9), width: 1.5)
+        : disabled
+            ? Border.all(color: isDark ? const Color(0xFF1F2638) : const Color(0xFFE5E7EB))
+            : Border.all(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7));
 
     return Material(
       color: Colors.transparent,
@@ -996,6 +1219,145 @@ class SudokuResultOverlay extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Non-intrusive Toast Banner Overlay ──────────────────────────────────────
+class _SudokuToastBanner extends StatelessWidget {
+  const _SudokuToastBanner({required this.message});
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 110,
+      left: 24,
+      right: 24,
+      child: IgnorePointer(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+              child: child,
+            ),
+          ),
+          child: message == null
+              ? const SizedBox.shrink()
+              : Center(
+                  key: ValueKey(message),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1B4B).withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: Color(0xFFA78BFA),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          message!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── New Game Confirmation Sheet ─────────────────────────────────────────────
+enum _NewGameConfirmChoice { continuePlaying, startNew }
+
+class _NewGameConfirmationSheet extends StatelessWidget {
+  const _NewGameConfirmationSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Bắt đầu ván mới?',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Ván Sudoku hiện tại đang có tiến trình dở dang. Tạo ván mới sẽ thay thế tiến trình này.',
+              style: TextStyle(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, _NewGameConfirmChoice.continuePlaying),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Tiếp tục chơi', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pop(context, _NewGameConfirmChoice.startNew),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                side: BorderSide(color: colors.outlineVariant),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Chọn ván mới', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
         ),
       ),
     );
