@@ -62,7 +62,7 @@ class ApiClient {
     });
   }
 
-  Future<dynamic> post(String endpoint, {Map<String, any>? body}) async {
+  Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
     return _sendRequest(() async {
       final headers = await _getHeaders();
       final url = Uri.parse('${EnvConfig.apiBaseUrl}$endpoint');
@@ -74,7 +74,7 @@ class ApiClient {
     });
   }
 
-  Future<dynamic> patch(String endpoint, {Map<String, any>? body}) async {
+  Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body}) async {
     return _sendRequest(() async {
       final headers = await _getHeaders();
       final url = Uri.parse('${EnvConfig.apiBaseUrl}$endpoint');
