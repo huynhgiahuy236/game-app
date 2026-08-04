@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/auth/services/auth_repository.dart';
-import 'features/auth/views/login_screen.dart';
 import 'features/home/views/main_home_screen.dart';
 import 'features/game_2048/services/game_2048_repository.dart';
 import 'features/sudoku/services/sudoku_repository.dart';
@@ -65,8 +64,6 @@ class _GameAppState extends State<GameApp> {
               ),
             ),
           );
-        } else if (!authRepository.isAuthenticated) {
-          homeWidget = LoginScreen(authRepository: authRepository);
         } else {
           homeWidget = MainHomeScreen(
             authRepository: authRepository,

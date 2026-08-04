@@ -393,53 +393,50 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         separatorBuilder: (context, idx) => const SizedBox(height: 14),
                         itemBuilder: (context, index) {
                           final item = _recentReceipts[index];
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
+                          return Material(
+                            color: const Color(0xFF1E293B),
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0xFF334155)),
+                              side: const BorderSide(color: Color(0xFF334155)),
                             ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                                leading: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0284C7).withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Icon(Icons.directions_boat_filled_rounded, color: Color(0xFF38BDF8), size: 30),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                              leading: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                title: Row(
-                                  children: [
-                                    Text(
-                                      AppFormatters.formatDate(item.receiptDate),
-                                      style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
-                                    ),
-                                    const Text(' · ', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                                    Text(
-                                      item.boatNumber,
-                                      style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white),
-                                    ),
-                                  ],
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 6.0),
-                                  child: Text(
-                                    AppFormatters.formatKgToTons(item.weightKg),
-                                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
-                                  ),
-                                ),
-                                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 20, color: Color(0xFF64748B)),
-                                onTap: () async {
-                                  final updated = await Navigator.push<bool>(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => ReceiptDetailScreen(receiptId: item.id)),
-                                  );
-                                  if (updated == true) _loadData();
-                                },
+                                child: const Icon(Icons.directions_boat_filled_rounded, color: Color(0xFF38BDF8), size: 30),
                               ),
+                              title: Row(
+                                children: [
+                                  Text(
+                                    AppFormatters.formatDate(item.receiptDate),
+                                    style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
+                                  ),
+                                  const Text(' · ', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                                  Text(
+                                    item.boatNumber,
+                                    style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 6.0),
+                                child: Text(
+                                  AppFormatters.formatKgToTons(item.weightKg),
+                                  style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                                ),
+                              ),
+                              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 20, color: Color(0xFF64748B)),
+                              onTap: () async {
+                                final updated = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => ReceiptDetailScreen(receiptId: item.id)),
+                                );
+                                if (updated == true) _loadData();
+                              },
                             ),
                           );
                         },

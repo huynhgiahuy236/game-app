@@ -44,11 +44,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               // Shared Section: Theme
               _buildSectionHeader('GIAO DIỆN'),
               const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+              Material(
+                color: const Color(0xFF1E293B),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  side: const BorderSide(color: Color(0xFF334155)),
                 ),
                 child: SwitchListTile(
                   value: isDark,
@@ -122,11 +122,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               ] else if (widget.currentModule == 'boat_receipts') ...[
                 _buildSectionHeader('TÙY CHỈNH SỔ GHE'),
                 const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                Material(
+                  color: const Color(0xFF1E293B),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF334155)),
+                    side: const BorderSide(color: Color(0xFF334155)),
                   ),
                   child: Column(
                     children: [
@@ -150,11 +150,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               ] else if (widget.currentModule == 'games') ...[
                 _buildSectionHeader('TÙY CHỈNH TRÒ CHƠI'),
                 const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                Material(
+                  color: const Color(0xFF1E293B),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF334155)),
+                    side: const BorderSide(color: Color(0xFF334155)),
                   ),
                   child: Column(
                     children: [

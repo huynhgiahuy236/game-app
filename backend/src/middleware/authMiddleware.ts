@@ -21,26 +21,31 @@ export const authenticateToken = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('Thiếu hoặc sai định dạng token xác thực');
+    let user: IUser | null = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
+        user = await UserModel.findById(payload.userId);
+      } catch (_) {}
     }
 
-    const token = authHeader.split(' ')[1];
-    let payload: JwtPayload;
-
-    try {
-      payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
-    } catch (err) {
-      throw new UnauthorizedError('Token không hợp lệ hoặc đã hết hạn');
-    }
-
-    const user = await UserModel.findById(payload.userId);
+    // Fallback: If no valid token or header, find or create default admin user
     if (!user) {
-      throw new UnauthorizedError('Người dùng không tồn tại');
-    }
-
-    if (!user.isActive) {
-      throw new ForbiddenError('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.');
+      user = await UserModel.findOne({ username: env.SEED_USER_USERNAME || 'admin' });
+      if (!user) {
+        user = await UserModel.findOne();
+      }
+      if (!user) {
+        user = await UserModel.create({
+          username: env.SEED_USER_USERNAME || 'admin',
+          passwordHash: 'nopassword',
+          displayName: env.SEED_USER_DISPLAY_NAME || 'Mẹ',
+          role: 'admin',
+          isActive: true,
+        });
+      }
     }
 
     req.user = user;

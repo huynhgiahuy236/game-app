@@ -4,7 +4,7 @@ import 'package:gameapp/app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('app launches to login screen when unauthenticated', (tester) async {
+  testWidgets('app launches directly to main home screen', (tester) async {
     SharedPreferences.setMockInitialValues({'sudoku.tutorial.v1': true});
     FlutterSecureStorage.setMockInitialValues({});
 
@@ -12,8 +12,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('CHỊ MƯỜI APP'), findsOneWidget);
-    expect(find.text('ĐĂNG NHẬP'), findsOneWidget);
+    expect(find.text('Trang chủ'), findsOneWidget);
+    expect(find.text('SỔ GHE NHẬP LÚA'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
