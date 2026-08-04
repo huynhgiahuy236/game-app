@@ -1,6 +1,6 @@
 # Chị Mười Application Project (GameApp + Sổ Ghe)
 
-Dự án ứng dụng di động Flutter và dịch vụ backend Node.js TypeScript phục vụ quản lý phiếu ghe nhập lúa ("Sổ ghe") và các trò chơi giải trí dành riêng cho mẹ.
+Dự án ứng dụng di động Flutter và dịch vụ backend Node.js TypeScript phục vụ quản lý phiếu ghe nhập trấu ("Sổ ghe") và các trò chơi giải trí dành riêng cho mẹ.
 
 ## Cấu trúc thư mục dự án
 

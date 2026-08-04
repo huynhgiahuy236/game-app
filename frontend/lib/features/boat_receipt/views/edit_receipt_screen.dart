@@ -215,7 +215,7 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
                 const SizedBox(height: 20),
 
                 // Price per Kg
-                const Text('Giá lúa (đ/kg)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text('Giá trấu (đ/kg)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _priceController,

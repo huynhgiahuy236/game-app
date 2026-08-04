@@ -3,7 +3,12 @@ import '../../../core/utils/formatters.dart';
 import '../services/boat_receipt_repository.dart';
 
 class ReceiptStatisticsScreen extends StatefulWidget {
-  const ReceiptStatisticsScreen({super.key});
+  final int initialTabIndex;
+
+  const ReceiptStatisticsScreen({
+    super.key,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<ReceiptStatisticsScreen> createState() => _ReceiptStatisticsScreenState();
@@ -24,7 +29,11 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 3),
+    );
     _loadStatistics();
   }
 
@@ -116,14 +125,14 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
 
   Widget _buildDailyTab() {
     if (_dailyData == null) return const SizedBox();
-    final trips = _dailyData!['trips'] ?? 0;
-    final totalKg = _dailyData!['totalKg'] ?? 0;
-    final totalTons = _dailyData!['totalTons'] ?? 0.0;
-    final avgTons = _dailyData!['avgTonsPerTrip'] ?? 0.0;
+    final trips = (_dailyData!['trips'] as num?)?.toInt() ?? 0;
+    final totalKg = (_dailyData!['totalKg'] as num?)?.toInt() ?? 0;
+    final totalTons = (_dailyData!['totalTons'] as num?)?.toDouble() ?? 0.0;
+    final avgTons = (_dailyData!['avgTonsPerTrip'] as num?)?.toDouble() ?? 0.0;
     final byBoat = List.from(_dailyData!['byBoat'] ?? []);
 
-    final totalAmount = _dailyData!['totalAmount'] ?? 0;
-    final avgPricePerKg = _dailyData!['avgPricePerKg'] ?? 0;
+    final totalAmount = (_dailyData!['totalAmount'] as num?)?.toInt() ?? 0;
+    final avgPricePerKg = (_dailyData!['avgPricePerKg'] as num?)?.toInt() ?? 0;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -152,7 +161,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
           if (byBoat.isEmpty)
             Text('Hôm nay chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)))
           else
-            ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
+            ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], (b['trips'] as num).toInt(), (b['totalKg'] as num).toInt())),
         ],
       ),
     );
@@ -162,15 +171,15 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
     if (_monthlyData == null) return const SizedBox();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final trips = _monthlyData!['trips'] ?? 0;
-    final totalKg = _monthlyData!['totalKg'] ?? 0;
-    final totalTons = _monthlyData!['totalTons'] ?? 0.0;
-    final avgTons = _monthlyData!['avgTonsPerTrip'] ?? 0.0;
+    final trips = (_monthlyData!['trips'] as num?)?.toInt() ?? 0;
+    final totalKg = (_monthlyData!['totalKg'] as num?)?.toInt() ?? 0;
+    final totalTons = (_monthlyData!['totalTons'] as num?)?.toDouble() ?? 0.0;
+    final avgTons = (_monthlyData!['avgTonsPerTrip'] as num?)?.toDouble() ?? 0.0;
     final highestDay = _monthlyData!['highestDay'];
     final byBoat = List.from(_monthlyData!['byBoat'] ?? []);
 
-    final totalAmount = _monthlyData!['totalAmount'] ?? 0;
-    final avgPricePerKg = _monthlyData!['avgPricePerKg'] ?? 0;
+    final totalAmount = (_monthlyData!['totalAmount'] as num?)?.toInt() ?? 0;
+    final avgPricePerKg = (_monthlyData!['avgPricePerKg'] as num?)?.toInt() ?? 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -209,10 +218,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Ngày nhập nhiều lúa nhất', style: TextStyle(fontSize: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
+                        Text('Ngày nhập nhiều trấu nhất', style: TextStyle(fontSize: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
                         const SizedBox(height: 2),
                         Text(
-                          '${highestDay['date']} · ${AppFormatters.formatKgToTons(highestDay['totalKg'])} (${highestDay['trips']} chuyến)',
+                          '${highestDay['date']} · ${AppFormatters.formatKgToTons((highestDay['totalKg'] as num).toInt())} (${highestDay['trips']} chuyến)',
                           style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFDE047) : const Color(0xFFB45309)),
                         ),
                       ],
@@ -229,7 +238,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
           if (byBoat.isEmpty)
             Text('Tháng này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)))
           else
-            ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
+            ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], (b['trips'] as num).toInt(), (b['totalKg'] as num).toInt())),
         ],
       ),
     );
@@ -237,9 +246,9 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
 
   Widget _buildYearlyTab() {
     if (_yearlyData == null) return const SizedBox();
-    final trips = _yearlyData!['trips'] ?? 0;
-    final totalKg = _yearlyData!['totalKg'] ?? 0;
-    final totalTons = _yearlyData!['totalTons'] ?? 0.0;
+    final trips = (_yearlyData!['trips'] as num?)?.toInt() ?? 0;
+    final totalKg = (_yearlyData!['totalKg'] as num?)?.toInt() ?? 0;
+    final totalTons = (_yearlyData!['totalTons'] as num?)?.toDouble() ?? 0.0;
     final highestMonth = _yearlyData!['highestMonth'];
     final monthlyTotals = List.from(_yearlyData!['monthlyTotals'] ?? []);
 
@@ -281,7 +290,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
                         const Text('Tháng đạt khối lượng cao nhất', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8))),
                         const SizedBox(height: 2),
                         Text(
-                          'Tháng ${highestMonth['month']} · ${AppFormatters.formatKgToTons(highestMonth['totalKg'])}',
+                          'Tháng ${highestMonth['month']} · ${AppFormatters.formatKgToTons((highestMonth['totalKg'] as num).toInt())}',
                           style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFFE9D5FF)),
                         ),
                       ],
@@ -298,7 +307,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
           if (monthlyTotals.isEmpty)
             const Text('Năm này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
           else
-            ...monthlyTotals.map((m) => _buildBoatStatTile('Tháng ${m['month']}', m['trips'], m['totalKg'])),
+            ...monthlyTotals.map((m) => _buildBoatStatTile('Tháng ${m['month']}', (m['trips'] as num).toInt(), (m['totalKg'] as num).toInt())),
         ],
       ),
     );
@@ -317,7 +326,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
           if (_byBoatData!.isEmpty)
             const Text('Chưa có dữ liệu ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
           else
-            ..._byBoatData!.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
+            ..._byBoatData!.map((b) => _buildBoatStatTile(b['boatNumber'], (b['trips'] as num).toInt(), (b['totalKg'] as num).toInt())),
         ],
       ),
     );
@@ -383,7 +392,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
               children: [
                 Column(
                   children: [
-                    const Text('Tổng tiền lúa', style: TextStyle(fontSize: 15, color: Color(0xFFFDE047))),
+                    const Text('Tổng tiền trấu', style: TextStyle(fontSize: 15, color: Color(0xFFFDE047))),
                     const SizedBox(height: 4),
                     Text(
                       AppFormatters.formatCurrency(totalAmount),
@@ -395,7 +404,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
                   Container(width: 1.5, height: 45, color: Colors.white30),
                   Column(
                     children: [
-                      const Text('Giá lúa trung bình', style: TextStyle(fontSize: 15, color: Color(0xFFFDE047))),
+                      const Text('Giá trấu trung bình', style: TextStyle(fontSize: 15, color: Color(0xFFFDE047))),
                       const SizedBox(height: 4),
                       Text(
                         AppFormatters.formatPricePerKg(avgPricePerKg),

@@ -13,7 +13,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Trang chủ'), findsOneWidget);
-    expect(find.text('SỔ GHE NHẬP LÚA'), findsOneWidget);
+    expect(find.text('Sổ ghe'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

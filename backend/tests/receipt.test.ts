@@ -53,7 +53,7 @@ describe('Boat Receipt API Endpoints', () => {
       .field('receiptDate', '2025-07-11')
       .field('boatNumber', 'ag 0204')
       .field('weightKg', '80956')
-      .field('note', 'Chị Mười nhập lúa');
+      .field('note', 'Chị Mười nhập trấu');
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);

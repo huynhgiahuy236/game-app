@@ -160,8 +160,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     final List<ModuleItem> allModules = [
       ModuleItem(
         id: 'boat_receipts',
-        title: 'SỔ GHE NHẬP LÚA',
-        subtitle: 'Chụp phiếu & Thống kê khối lượng',
+        title: 'Sổ ghe',
+        subtitle: 'Quản lý phiếu & Thống kê trấu',
         icon: Icons.directions_boat_filled_rounded,
         gradient: const LinearGradient(
           colors: [Color(0xFF0F172A), Color(0xFF0369A1)],
@@ -183,7 +183,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       ),
       ModuleItem(
         id: 'games',
-        title: 'KHO TRÒ CHƠI',
+        title: 'Game',
         subtitle: 'Caro, 2048, Sudoku, Đổ mìn, Cờ tỷ phú',
         icon: Icons.sports_esports_rounded,
         gradient: const LinearGradient(

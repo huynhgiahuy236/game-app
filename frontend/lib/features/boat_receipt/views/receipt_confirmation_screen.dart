@@ -400,7 +400,7 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
 
                       // Price / Kg Field
                       Text(
-                        'Giá lúa (đ/kg)',
+                        'Giá trấu (đ/kg)',
                         style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 8),

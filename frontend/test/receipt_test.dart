@@ -18,7 +18,7 @@ void main() {
         'receiptDate': '2025-07-11T00:00:00.000Z',
         'boatNumber': 'AG 0204',
         'weightKg': 80956,
-        'note': 'Lúa tươi ST25',
+        'note': 'trấu tươi ST25',
         'input': {'method': 'camera', 'hasImage': true},
         'verification': {'wasEdited': true, 'editedFields': ['boatNumber']},
         'createdAt': '2025-07-11T08:00:00.000Z',

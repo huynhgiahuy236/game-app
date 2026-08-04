@@ -57,7 +57,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         backgroundColor: const Color(0xFF1E293B),
         title: const Text('Xóa phiếu này?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
         content: const Text(
-          'Bạn có chắc chắn muốn xóa phiếu nhập lúa này không? Thao tác này không thể hoàn tác.',
+          'Bạn có chắc chắn muốn xóa phiếu nhập trấu này không? Thao tác này không thể hoàn tác.',
           style: TextStyle(fontSize: 18, color: Color(0xFFCBD5E1)),
         ),
         actions: [
@@ -245,7 +245,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          const Text('GIÁ LÚA', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                          const Text('GIÁ trấu', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
                                           const SizedBox(height: 2),
                                           Text(
                                             AppFormatters.formatPricePerKg(_receipt!.pricePerKg),
@@ -285,7 +285,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                               children: [
                                 _buildDetailRow('Ngày nhập phiếu', AppFormatters.formatDate(_receipt!.receiptDate)),
                                 const Divider(color: Color(0xFF334155), height: 24),
-                                _buildDetailRow('Đơn giá lúa', _receipt!.pricePerKg > 0 ? AppFormatters.formatPricePerKg(_receipt!.pricePerKg) : 'Chưa nhập'),
+                                _buildDetailRow('Đơn giá trấu', _receipt!.pricePerKg > 0 ? AppFormatters.formatPricePerKg(_receipt!.pricePerKg) : 'Chưa nhập'),
                                 const Divider(color: Color(0xFF334155), height: 24),
                                 _buildDetailRow('Tổng thành tiền', _receipt!.computedTotalAmount > 0 ? AppFormatters.formatFullCurrency(_receipt!.computedTotalAmount) : '0 đ'),
                                 const Divider(color: Color(0xFF334155), height: 24),

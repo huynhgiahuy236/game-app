@@ -28,6 +28,7 @@ class BoatReceiptHomeScreen extends StatefulWidget {
 class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
   final BoatReceiptRepository _repository = BoatReceiptRepository();
   int _currentNavIndex = 0;
+  int _statsInitialTab = 0;
 
   HomeSummaryModel? _summary;
   List<BoatReceiptModel> _recentReceipts = [];
@@ -72,7 +73,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
     final List<Widget> pages = [
       _buildHomeContent(),
       const ReceiptHistoryScreen(),
-      const ReceiptStatisticsScreen(),
+      ReceiptStatisticsScreen(initialTabIndex: _statsInitialTab),
       AppSettingsScreen(
         currentModule: 'boat_receipts',
         onThemeChanged: widget.onThemeChanged ?? (_) {},
@@ -158,7 +159,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
               )
             : null,
         title: Text(
-          'SỔ GHE NHẬP LÚA',
+          'SỔ GHE NHẬP trấu',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
         ),
         backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
@@ -200,114 +201,157 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                       const SizedBox(height: 20),
                     ],
 
-                    // Summary Stats Cards Row
-                    Row(
-                      children: [
-                        // Today Stats Card
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF1E293B), Color(0xFF0369A1)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0369A1).withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                              border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+                    // Summary Stats Cards (Stacked 1 row per card)
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _statsInitialTab = 0;
+                          _currentNavIndex = 2;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(22),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E293B), Color(0xFF0369A1)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0369A1).withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'HÔM NAY',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
-                                ),
-                                const SizedBox(height: 6),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '${_summary?.today.trips ?? 0} chuyến',
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                          ],
+                          border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3), width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.today_rounded, size: 22, color: Color(0xFFFDE047)),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'HÔM NAY',
+                                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '(${_summary?.today.trips ?? 0} chuyến)',
+                                        style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
+                                  const SizedBox(height: 8),
+                                  Text(
                                     AppFormatters.formatKgToTons(_summary?.today.weightKg ?? 0),
-                                    style: const TextStyle(fontSize: 18, color: Color(0xFFE2E8F0), fontWeight: FontWeight.w600),
+                                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Month Stats Card
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF065F46), Color(0xFF0D9488)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                                  if ((_summary?.today.totalAmount ?? 0) > 0) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      AppFormatters.formatCurrency(_summary?.today.totalAmount ?? 0),
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                    ),
+                                  ],
+                                ],
                               ),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0D9488).withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                              border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.3)),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            const Row(
                               children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    'THÁNG ${AppFormatters.formatMonthYear(now)}',
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '${_summary?.month.trips ?? 0} chuyến',
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    AppFormatters.formatKgToTons(_summary?.month.weightKg ?? 0),
-                                    style: const TextStyle(fontSize: 18, color: Color(0xFFE2E8F0), fontWeight: FontWeight.w600),
-                                  ),
-                                ),
+                                Text('Thống kê', style: TextStyle(fontSize: 15, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF38BDF8), size: 18),
                               ],
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Month Stats Card (Full Row)
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _statsInitialTab = 1;
+                          _currentNavIndex = 2;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(22),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF065F46), Color(0xFF0D9488)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0D9488).withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.3), width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_month_rounded, size: 22, color: Color(0xFFFDE047)),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'THÁNG ${AppFormatters.formatMonthYear(now)}',
+                                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '(${_summary?.month.trips ?? 0} chuyến)',
+                                        style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    AppFormatters.formatKgToTons(_summary?.month.weightKg ?? 0),
+                                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                                  if ((_summary?.month.totalAmount ?? 0) > 0) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      AppFormatters.formatCurrency(_summary?.month.totalAmount ?? 0),
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const Row(
+                              children: [
+                                Text('Thống kê', style: TextStyle(fontSize: 15, color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold)),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF2DD4BF), size: 18),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 24),
 
@@ -392,7 +436,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'Chưa có phiếu nhập lúa nào.\nBấm "CHỤP PHIẾU MỚI" để bắt đầu.',
+                            'Chưa có phiếu nhập trấu nào.\nBấm "CHỤP PHIẾU MỚI" để bắt đầu.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), height: 1.5),
                           ),
