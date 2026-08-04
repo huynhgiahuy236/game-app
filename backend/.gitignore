@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output - Render sẽ tự build, không commit dist
+dist/
+
+# Environment secrets
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
