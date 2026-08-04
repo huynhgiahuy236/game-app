@@ -8,6 +8,8 @@ export interface CreateReceiptDto {
   receiptDate: string; // ISO date string or YYYY-MM-DD
   boatNumber: string;
   weightKg: number;
+  pricePerKg?: number;
+  totalAmount?: number;
   note?: string;
   inputMethod?: 'camera' | 'gallery' | 'manual';
   ocrRawText?: string;
@@ -68,13 +70,19 @@ export const createReceipt = async (
     }
   }
 
+  const weightKg = Math.round(Number(dto.weightKg));
+  const pricePerKg = Math.max(0, Math.round(Number(dto.pricePerKg || 0)));
+  const totalAmount = Math.round(weightKg * pricePerKg);
+
   try {
     const newReceipt = await BoatReceiptModel.create({
       userId: new Types.ObjectId(userId),
       clientId: dto.clientId,
       receiptDate: parsedDate,
       boatNumber: dto.boatNumber.trim().toUpperCase(),
-      weightKg: Math.round(Number(dto.weightKg)),
+      weightKg,
+      pricePerKg,
+      totalAmount,
       note: dto.note || '',
       image: uploadedImage,
       input: {
@@ -216,6 +224,13 @@ export const updateReceipt = async (
     if (!editedFields.includes('weightKg')) editedFields.push('weightKg');
   }
 
+  if (updateData.pricePerKg !== undefined) {
+    receipt.pricePerKg = Math.max(0, Math.round(Number(updateData.pricePerKg)));
+    if (!editedFields.includes('pricePerKg')) editedFields.push('pricePerKg');
+  }
+
+  receipt.totalAmount = Math.round((receipt.weightKg || 0) * (receipt.pricePerKg || 0));
+
   if (updateData.note !== undefined) {
     receipt.note = updateData.note;
     if (!editedFields.includes('note')) editedFields.push('note');
@@ -271,30 +286,36 @@ export const getHomeSummary = async (userId: string) => {
   const [todayAgg, monthAgg] = await Promise.all([
     BoatReceiptModel.aggregate([
       { $match: { userId: uId, deletedAt: null, receiptDate: { $gte: startOfDay, $lte: endOfDay } } },
-      { $group: { _id: null, totalTrips: { $sum: 1 }, totalWeightKg: { $sum: '$weightKg' } } },
+      { $group: { _id: null, totalTrips: { $sum: 1 }, totalWeightKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
     ]),
     BoatReceiptModel.aggregate([
       { $match: { userId: uId, deletedAt: null, receiptDate: { $gte: startOfMonth, $lte: endOfMonth } } },
-      { $group: { _id: null, totalTrips: { $sum: 1 }, totalWeightKg: { $sum: '$weightKg' } } },
+      { $group: { _id: null, totalTrips: { $sum: 1 }, totalWeightKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
     ]),
   ]);
 
   const todayTrips = todayAgg[0]?.totalTrips || 0;
   const todayKg = todayAgg[0]?.totalWeightKg || 0;
+  const todayAmount = todayAgg[0]?.totalAmount || 0;
 
   const monthTrips = monthAgg[0]?.totalTrips || 0;
   const monthKg = monthAgg[0]?.totalWeightKg || 0;
+  const monthAmount = monthAgg[0]?.totalAmount || 0;
 
   return {
     today: {
       trips: todayTrips,
       weightKg: todayKg,
       weightTons: Number((todayKg / 1000).toFixed(3)),
+      totalAmount: todayAmount,
+      avgPricePerKg: todayKg > 0 ? Math.round(todayAmount / todayKg) : 0,
     },
     month: {
       trips: monthTrips,
       weightKg: monthKg,
       weightTons: Number((monthKg / 1000).toFixed(3)),
+      totalAmount: monthAmount,
+      avgPricePerKg: monthKg > 0 ? Math.round(monthAmount / monthKg) : 0,
     },
   };
 };
@@ -311,11 +332,11 @@ export const getDailyStats = async (userId: string, dateStr?: string) => {
   const [summary, byBoat, receipts] = await Promise.all([
     BoatReceiptModel.aggregate([
       { $match: match },
-      { $group: { _id: null, trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' } } },
+      { $group: { _id: null, trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
     ]),
     BoatReceiptModel.aggregate([
       { $match: match },
-      { $group: { _id: '$boatNumber', trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' } } },
+      { $group: { _id: '$boatNumber', trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
       { $sort: { totalKg: -1 } },
     ]),
     BoatReceiptModel.find(match).sort({ receiptDate: -1, createdAt: -1 }),
@@ -323,13 +344,17 @@ export const getDailyStats = async (userId: string, dateStr?: string) => {
 
   const trips = summary[0]?.trips || 0;
   const totalKg = summary[0]?.totalKg || 0;
+  const totalAmount = summary[0]?.totalAmount || 0;
   const avgKg = trips > 0 ? Math.round(totalKg / trips) : 0;
+  const avgPricePerKg = totalKg > 0 ? Math.round(totalAmount / totalKg) : 0;
 
   return {
     date: startOfDay.toISOString().split('T')[0],
     trips,
     totalKg,
     totalTons: Number((totalKg / 1000).toFixed(3)),
+    totalAmount,
+    avgPricePerKg,
     avgKgPerTrip: avgKg,
     avgTonsPerTrip: Number((avgKg / 1000).toFixed(3)),
     byBoat: byBoat.map((b) => ({
@@ -337,6 +362,7 @@ export const getDailyStats = async (userId: string, dateStr?: string) => {
       trips: b.trips,
       totalKg: b.totalKg,
       totalTons: Number((b.totalKg / 1000).toFixed(3)),
+      totalAmount: b.totalAmount || 0,
     })),
     receipts,
   };
@@ -364,7 +390,7 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
   const [summary, dailyGroup, boatGroup] = await Promise.all([
     BoatReceiptModel.aggregate([
       { $match: match },
-      { $group: { _id: null, trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' } } },
+      { $group: { _id: null, trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
     ]),
     BoatReceiptModel.aggregate([
       { $match: match },
@@ -373,20 +399,23 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$receiptDate' } },
           trips: { $sum: 1 },
           totalKg: { $sum: '$weightKg' },
+          totalAmount: { $sum: '$totalAmount' },
         },
       },
       { $sort: { _id: 1 } },
     ]),
     BoatReceiptModel.aggregate([
       { $match: match },
-      { $group: { _id: '$boatNumber', trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' } } },
+      { $group: { _id: '$boatNumber', trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
       { $sort: { totalKg: -1 } },
     ]),
   ]);
 
   const trips = summary[0]?.trips || 0;
   const totalKg = summary[0]?.totalKg || 0;
+  const totalAmount = summary[0]?.totalAmount || 0;
   const avgKg = trips > 0 ? Math.round(totalKg / trips) : 0;
+  const avgPricePerKg = totalKg > 0 ? Math.round(totalAmount / totalKg) : 0;
 
   // Highest volume day
   let highestDay = null;
@@ -397,6 +426,7 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
       trips: sorted[0].trips,
       totalKg: sorted[0].totalKg,
       totalTons: Number((sorted[0].totalKg / 1000).toFixed(3)),
+      totalAmount: sorted[0].totalAmount || 0,
     };
   }
 
@@ -405,6 +435,8 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
     trips,
     totalKg,
     totalTons: Number((totalKg / 1000).toFixed(3)),
+    totalAmount,
+    avgPricePerKg,
     avgKgPerTrip: avgKg,
     avgTonsPerTrip: Number((avgKg / 1000).toFixed(3)),
     highestDay,
@@ -413,12 +445,14 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
       trips: d.trips,
       totalKg: d.totalKg,
       totalTons: Number((d.totalKg / 1000).toFixed(3)),
+      totalAmount: d.totalAmount || 0,
     })),
     byBoat: boatGroup.map((b) => ({
       boatNumber: b._id,
       trips: b.trips,
       totalKg: b.totalKg,
       totalTons: Number((b.totalKg / 1000).toFixed(3)),
+      totalAmount: b.totalAmount || 0,
     })),
   };
 };

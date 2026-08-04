@@ -98,12 +98,20 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: const Text('CHI TIẾT PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 28),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Text('CHI TIẾT PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         elevation: 0,
         actions: [
           if (_receipt != null) ...[
@@ -219,12 +227,47 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                                 const SizedBox(height: 4),
                                 Text(_receipt!.boatNumber, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
                                 const SizedBox(height: 16),
-                                const Text('KHỐI LƯỢNG', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppFormatters.formatKgToTons(_receipt!.weightKg),
-                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('KHỐI LƯỢNG', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          AppFormatters.formatKgToTons(_receipt!.weightKg),
+                                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                                        ),
+                                      ],
+                                    ),
+                                    if (_receipt!.pricePerKg > 0)
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          const Text('GIÁ LÚA', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            AppFormatters.formatPricePerKg(_receipt!.pricePerKg),
+                                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
                                 ),
+                                if (_receipt!.computedTotalAmount > 0) ...[
+                                  const Divider(color: Color(0xFF38BDF8), height: 24, thickness: 1),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('THÀNH TIỀN:', style: TextStyle(fontSize: 16, color: Color(0xFFFDE047), fontWeight: FontWeight.bold)),
+                                      Text(
+                                        AppFormatters.formatFullCurrency(_receipt!.computedTotalAmount),
+                                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFFFDE047)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -241,6 +284,10 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                             child: Column(
                               children: [
                                 _buildDetailRow('Ngày nhập phiếu', AppFormatters.formatDate(_receipt!.receiptDate)),
+                                const Divider(color: Color(0xFF334155), height: 24),
+                                _buildDetailRow('Đơn giá lúa', _receipt!.pricePerKg > 0 ? AppFormatters.formatPricePerKg(_receipt!.pricePerKg) : 'Chưa nhập'),
+                                const Divider(color: Color(0xFF334155), height: 24),
+                                _buildDetailRow('Tổng thành tiền', _receipt!.computedTotalAmount > 0 ? AppFormatters.formatFullCurrency(_receipt!.computedTotalAmount) : '0 đ'),
                                 const Divider(color: Color(0xFF334155), height: 24),
                                 _buildDetailRow('Phương thức nhập', _receipt!.inputMethod == 'camera' ? 'Chụp ảnh' : _receipt!.inputMethod == 'gallery' ? 'Thư viện' : 'Thủ công'),
                                 const Divider(color: Color(0xFF334155), height: 24),

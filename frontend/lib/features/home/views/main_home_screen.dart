@@ -91,8 +91,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       body: IndexedStack(
         index: _currentBottomNavIndex,
         children: [
@@ -107,19 +109,23 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           height: 70,
-          backgroundColor: const Color(0xFF1E293B),
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           indicatorColor: const Color(0xFF0284C7),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => TextStyle(
               fontSize: 15,
               fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.w500,
-              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+              color: states.contains(WidgetState.selected)
+                  ? (isDark ? Colors.white : const Color(0xFF0284C7))
+                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
             ),
           ),
           iconTheme: WidgetStateProperty.resolveWith(
             (states) => IconThemeData(
               size: 26,
-              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+              color: states.contains(WidgetState.selected)
+                  ? Colors.white
+                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
             ),
           ),
         ),
@@ -214,10 +220,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       return 0;
     });
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
         elevation: 0,
         title: Row(
           children: [
@@ -232,7 +240,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             const SizedBox(width: 12),
             Text(
               'Chào $displayName',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             ),
           ],
         ),

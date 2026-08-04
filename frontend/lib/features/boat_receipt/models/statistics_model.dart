@@ -2,14 +2,24 @@ class SummaryItem {
   final int trips;
   final int weightKg;
   final double weightTons;
+  final int totalAmount;
+  final int avgPricePerKg;
 
-  SummaryItem({required this.trips, required this.weightKg, required this.weightTons});
+  SummaryItem({
+    required this.trips,
+    required this.weightKg,
+    required this.weightTons,
+    this.totalAmount = 0,
+    this.avgPricePerKg = 0,
+  });
 
   factory SummaryItem.fromJson(Map<String, dynamic> json) {
     return SummaryItem(
       trips: json['trips'] ?? 0,
       weightKg: json['weightKg'] ?? 0,
       weightTons: (json['weightTons'] ?? 0.0).toDouble(),
+      totalAmount: json['totalAmount'] ?? 0,
+      avgPricePerKg: json['avgPricePerKg'] ?? 0,
     );
   }
 }
@@ -33,12 +43,14 @@ class BoatGroupStat {
   final int trips;
   final int totalKg;
   final double totalTons;
+  final int totalAmount;
 
   BoatGroupStat({
     required this.boatNumber,
     required this.trips,
     required this.totalKg,
     required this.totalTons,
+    this.totalAmount = 0,
   });
 
   factory BoatGroupStat.fromJson(Map<String, dynamic> json) {
@@ -47,6 +59,7 @@ class BoatGroupStat {
       trips: json['trips'] ?? 0,
       totalKg: json['totalKg'] ?? 0,
       totalTons: (json['totalTons'] ?? 0.0).toDouble(),
+      totalAmount: json['totalAmount'] ?? 0,
     );
   }
 }
@@ -56,12 +69,14 @@ class PeriodTotalStat {
   final int trips;
   final int totalKg;
   final double totalTons;
+  final int totalAmount;
 
   PeriodTotalStat({
     required this.label,
     required this.trips,
     required this.totalKg,
     required this.totalTons,
+    this.totalAmount = 0,
   });
 
   factory PeriodTotalStat.fromJson(Map<String, dynamic> json) {
@@ -70,6 +85,7 @@ class PeriodTotalStat {
       trips: json['trips'] ?? 0,
       totalKg: json['totalKg'] ?? 0,
       totalTons: (json['totalTons'] ?? 0.0).toDouble(),
+      totalAmount: json['totalAmount'] ?? 0,
     );
   }
 }

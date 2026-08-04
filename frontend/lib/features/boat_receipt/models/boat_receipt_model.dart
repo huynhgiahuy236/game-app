@@ -44,6 +44,8 @@ class BoatReceiptModel {
   final DateTime receiptDate;
   final String boatNumber;
   final int weightKg;
+  final int pricePerKg;
+  final int totalAmount;
   final String note;
   final ReceiptImage? image;
   final String inputMethod;
@@ -57,6 +59,8 @@ class BoatReceiptModel {
     required this.receiptDate,
     required this.boatNumber,
     required this.weightKg,
+    this.pricePerKg = 0,
+    this.totalAmount = 0,
     required this.note,
     this.image,
     required this.inputMethod,
@@ -66,14 +70,20 @@ class BoatReceiptModel {
   });
 
   double get weightTons => weightKg / 1000.0;
+  int get computedTotalAmount => totalAmount > 0 ? totalAmount : weightKg * pricePerKg;
 
   factory BoatReceiptModel.fromJson(Map<String, dynamic> json) {
+    final wKg = json['weightKg'] ?? 0;
+    final pKg = json['pricePerKg'] ?? 0;
+    final totAmt = json['totalAmount'] ?? (wKg * pKg);
     return BoatReceiptModel(
       id: json['id'] ?? json['_id'] ?? '',
       clientId: json['clientId'] ?? '',
       receiptDate: DateTime.tryParse(json['receiptDate'] ?? '') ?? DateTime.now(),
       boatNumber: json['boatNumber'] ?? '',
-      weightKg: json['weightKg'] ?? 0,
+      weightKg: wKg,
+      pricePerKg: pKg,
+      totalAmount: totAmt,
       note: json['note'] ?? '',
       image: json['image'] != null ? ReceiptImage.fromJson(json['image']) : null,
       inputMethod: json['input']?['method'] ?? 'manual',

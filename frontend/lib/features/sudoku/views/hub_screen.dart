@@ -645,6 +645,17 @@ class _HeroHeaderState extends State<_HeroHeader>
       ),
       child: Row(
         children: [
+          if (Navigator.canPop(context)) ...[
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                size: 28,
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            const SizedBox(width: 8),
+          ],
           // Logo with glow
           Container(
             width: 56,

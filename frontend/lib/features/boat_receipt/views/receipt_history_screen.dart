@@ -84,12 +84,20 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: const Text('LỊCH SỬ PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 28),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Text('LỊCH SỬ PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         elevation: 0,
       ),
       body: Column(
@@ -230,13 +238,27 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                                                     ],
                                                   ),
                                                   const SizedBox(height: 6),
-                                                  Text(
-                                                    AppFormatters.formatKgToTons(receipt.weightKg),
-                                                    style: const TextStyle(
-                                                      fontSize: 20,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Color(0xFF38BDF8),
-                                                    ),
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        AppFormatters.formatKgToTons(receipt.weightKg),
+                                                        style: const TextStyle(
+                                                          fontSize: 20,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Color(0xFF38BDF8),
+                                                        ),
+                                                      ),
+                                                      if (receipt.computedTotalAmount > 0)
+                                                        Text(
+                                                          AppFormatters.formatCurrency(receipt.computedTotalAmount),
+                                                          style: const TextStyle(
+                                                            fontSize: 18,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Color(0xFFFDE047),
+                                                          ),
+                                                        ),
+                                                    ],
                                                   ),
                                                   if (receipt.note.isNotEmpty) ...[
                                                     const SizedBox(height: 4),

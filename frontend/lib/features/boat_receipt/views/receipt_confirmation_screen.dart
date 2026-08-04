@@ -28,12 +28,14 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
 
   late TextEditingController _boatController;
   late TextEditingController _weightController;
+  late TextEditingController _priceController;
   late TextEditingController _noteController;
 
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
   String? _errorMessage;
   int _calculatedKg = 0;
+  int _calculatedPrice = 0;
   bool _wasEdited = false;
   final List<String> _editedFields = [];
 
@@ -60,29 +62,36 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
 
     _boatController = TextEditingController(text: boatStr);
     _weightController = TextEditingController(text: weightStr);
+    _priceController = TextEditingController(text: '7500');
     _noteController = TextEditingController();
 
     if (weightStr.isNotEmpty) {
       _calculatedKg = int.tryParse(weightStr) ?? 0;
     }
+    _calculatedPrice = 7500;
 
-    _weightController.addListener(_onWeightChanged);
+    _weightController.addListener(_onFormValueChanged);
+    _priceController.addListener(_onFormValueChanged);
   }
 
-  void _onWeightChanged() {
-    final val = int.tryParse(_weightController.text.trim()) ?? 0;
-    if (_calculatedKg != val) {
+  void _onFormValueChanged() {
+    final kg = int.tryParse(_weightController.text.trim()) ?? 0;
+    final price = int.tryParse(_priceController.text.trim()) ?? 0;
+    if (_calculatedKg != kg || _calculatedPrice != price) {
       setState(() {
-        _calculatedKg = val;
+        _calculatedKg = kg;
+        _calculatedPrice = price;
       });
     }
   }
 
   @override
   void dispose() {
-    _weightController.removeListener(_onWeightChanged);
+    _weightController.removeListener(_onFormValueChanged);
+    _priceController.removeListener(_onFormValueChanged);
     _boatController.dispose();
     _weightController.dispose();
+    _priceController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -129,6 +138,7 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
       final dateIso = _selectedDate.toIso8601String();
       final boatNum = _boatController.text.trim().toUpperCase();
       final weightKg = int.parse(_weightController.text.trim());
+      final pricePerKg = int.tryParse(_priceController.text.trim()) ?? 0;
       final note = _noteController.text.trim();
 
       await _repository.createReceipt(
@@ -136,6 +146,7 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
         receiptDate: dateIso,
         boatNumber: boatNum,
         weightKg: weightKg,
+        pricePerKg: pricePerKg,
         note: note,
         imageFile: widget.imageFile,
         inputMethod: widget.inputMethod,
@@ -175,15 +186,23 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: const Text(
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 28),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Text(
           'XÁC NHẬN PHIẾU',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
         ),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         elevation: 0,
       ),
       body: SafeArea(
@@ -377,18 +396,49 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                      // Converted Tons Display Box
+                      // Price / Kg Field
+                      const Text(
+                        'Giá lúa (đ/kg)',
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _priceController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                        decoration: InputDecoration(
+                          hintText: 'Ví dụ: 7500',
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          suffixText: 'đ/kg',
+                          suffixStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                          prefixIcon: const Icon(Icons.payments_rounded, size: 28, color: Color(0xFFFDE047)),
+                          filled: true,
+                          fillColor: const Color(0xFF0F172A),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          if (!_editedFields.contains('pricePerKg')) _editedFields.add('pricePerKg');
+                          _wasEdited = true;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Converted Tons & Total Money Display Box
                       Container(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF065F46), Color(0xFF047857)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFF047857).withValues(alpha: 0.3),
@@ -397,30 +447,57 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.swap_horiz_rounded, size: 36, color: Color(0xFFA7F3D0)),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              children: [
+                                const Icon(Icons.calculate_rounded, size: 32, color: Color(0xFFA7F3D0)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'TỔNG QUY ĐỔI KHỐI LƯỢNG',
+                                        style: TextStyle(fontSize: 14, color: Color(0xFFA7F3D0), fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        AppFormatters.formatKgToTons(_calculatedKg),
+                                        style: const TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_calculatedPrice > 0 && _calculatedKg > 0) ...[
+                              const Divider(color: Color(0xFF34D399), height: 24, thickness: 1),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
-                                    'TƯƠNG ĐƯƠNG QUY ĐỔI',
-                                    style: TextStyle(fontSize: 15, color: Color(0xFFA7F3D0), fontWeight: FontWeight.bold),
+                                    'TỔNG THÀNH TIỀN:',
+                                    style: TextStyle(fontSize: 16, color: Color(0xFFFDE047), fontWeight: FontWeight.bold),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    AppFormatters.formatKgToTons(_calculatedKg),
-                                    style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                  FittedBox(
+                                    child: Text(
+                                      AppFormatters.formatFullCurrency(_calculatedKg * _calculatedPrice),
+                                      style: const TextStyle(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFFFDE047),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),

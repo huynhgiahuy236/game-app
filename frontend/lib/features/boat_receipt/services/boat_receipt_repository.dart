@@ -17,6 +17,7 @@ class BoatReceiptRepository {
     required String receiptDate,
     required String boatNumber,
     required int weightKg,
+    int pricePerKg = 0,
     String? note,
     File? imageFile,
     String? inputMethod,
@@ -32,6 +33,7 @@ class BoatReceiptRepository {
       'receiptDate': receiptDate,
       'boatNumber': boatNumber,
       'weightKg': weightKg.toString(),
+      'pricePerKg': pricePerKg.toString(),
       'note': note ?? '',
       'inputMethod': inputMethod ?? (imageFile != null ? 'camera' : 'manual'),
       'ocrRawText': ocrRawText ?? '',
@@ -89,12 +91,14 @@ class BoatReceiptRepository {
     String? receiptDate,
     String? boatNumber,
     int? weightKg,
+    int? pricePerKg,
     String? note,
   }) async {
     final body = <String, dynamic>{};
     if (receiptDate != null) body['receiptDate'] = receiptDate;
     if (boatNumber != null) body['boatNumber'] = boatNumber;
     if (weightKg != null) body['weightKg'] = weightKg;
+    if (pricePerKg != null) body['pricePerKg'] = pricePerKg;
     if (note != null) body['note'] = note;
 
     final resData = await _apiClient.patch('/receipts/$id', body: body);

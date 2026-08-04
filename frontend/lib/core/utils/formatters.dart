@@ -29,4 +29,27 @@ class AppFormatters {
   static String formatMonthYear(DateTime date) {
     return DateFormat('MM/yyyy').format(date);
   }
+
+  static String formatCurrency(num amount) {
+    if (amount <= 0) return '0 đ';
+    if (amount >= 1000000000) {
+      double ty = amount / 1000000000.0;
+      return '${NumberFormat('#,##0.00', 'vi_VN').format(ty)} tỷ đ';
+    } else if (amount >= 1000000) {
+      double trieu = amount / 1000000.0;
+      return '${NumberFormat('#,##0.00', 'vi_VN').format(trieu)} tr đ';
+    }
+    NumberFormat formatter = NumberFormat('#,##0', 'vi_VN');
+    return '${formatter.format(amount)} đ';
+  }
+
+  static String formatFullCurrency(num amount) {
+    NumberFormat formatter = NumberFormat('#,##0', 'vi_VN');
+    return '${formatter.format(amount)} đ';
+  }
+
+  static String formatPricePerKg(num price) {
+    NumberFormat formatter = NumberFormat('#,##0', 'vi_VN');
+    return '${formatter.format(price)} đ/kg';
+  }
 }

@@ -18,12 +18,14 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
 
   late TextEditingController _boatController;
   late TextEditingController _weightController;
+  late TextEditingController _priceController;
   late TextEditingController _noteController;
 
   late DateTime _selectedDate;
   bool _isLoading = false;
   String? _errorMessage;
   int _calculatedKg = 0;
+  int _calculatedPrice = 0;
 
   @override
   void initState() {
@@ -31,13 +33,19 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
     _selectedDate = widget.receipt.receiptDate;
     _boatController = TextEditingController(text: widget.receipt.boatNumber);
     _weightController = TextEditingController(text: widget.receipt.weightKg.toString());
+    _priceController = TextEditingController(text: widget.receipt.pricePerKg > 0 ? widget.receipt.pricePerKg.toString() : '7500');
     _noteController = TextEditingController(text: widget.receipt.note);
     _calculatedKg = widget.receipt.weightKg;
+    _calculatedPrice = widget.receipt.pricePerKg > 0 ? widget.receipt.pricePerKg : 7500;
 
-    _weightController.addListener(() {
-      setState(() {
-        _calculatedKg = int.tryParse(_weightController.text.trim()) ?? 0;
-      });
+    _weightController.addListener(_onFormValueChanged);
+    _priceController.addListener(_onFormValueChanged);
+  }
+
+  void _onFormValueChanged() {
+    setState(() {
+      _calculatedKg = int.tryParse(_weightController.text.trim()) ?? 0;
+      _calculatedPrice = int.tryParse(_priceController.text.trim()) ?? 0;
     });
   }
 
@@ -45,6 +53,7 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
   void dispose() {
     _boatController.dispose();
     _weightController.dispose();
+    _priceController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -78,6 +87,7 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
         receiptDate: _selectedDate.toIso8601String(),
         boatNumber: _boatController.text.trim().toUpperCase(),
         weightKg: int.parse(_weightController.text.trim()),
+        pricePerKg: int.tryParse(_priceController.text.trim()) ?? 0,
         note: _noteController.text.trim(),
       );
 
@@ -102,13 +112,21 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: const Text('CHỈNH SỬA PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue.shade900,
-        foregroundColor: Colors.white,
-        elevation: 2,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 28),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Text('CHỈNH SỬA PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -194,27 +212,62 @@ class _EditReceiptScreenState extends State<EditReceiptScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-                // Conversion
+                // Price per Kg
+                const Text('Giá lúa (đ/kg)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                  decoration: InputDecoration(
+                    suffixText: 'đ/kg',
+                    prefixIcon: const Icon(Icons.payments_rounded, size: 28, color: Color(0xFFD97706)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Conversion & Total Money Display
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.blue.shade300, width: 2),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(Icons.swap_horiz, size: 32, color: Colors.blue.shade900),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          const Text('Quy đổi ra tấn', style: TextStyle(fontSize: 16, color: Color(0xFF555555))),
-                          Text(AppFormatters.formatKgToTons(_calculatedKg), style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                          Icon(Icons.swap_horiz, size: 32, color: Colors.blue.shade900),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Quy đổi ra tấn', style: TextStyle(fontSize: 15, color: Color(0xFF555555))),
+                              Text(AppFormatters.formatKgToTons(_calculatedKg), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                            ],
+                          ),
                         ],
                       ),
+                      if (_calculatedPrice > 0 && _calculatedKg > 0) ...[
+                        const Divider(height: 20, thickness: 1),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Tổng thành tiền:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                            Text(
+                              AppFormatters.formatFullCurrency(_calculatedKg * _calculatedPrice),
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

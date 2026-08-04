@@ -45,6 +45,8 @@ export interface IBoatReceipt extends Document {
   receiptDate: Date;
   boatNumber: string;
   weightKg: number;
+  pricePerKg?: number;
+  totalAmount?: number;
   note?: string;
 
   image?: IReceiptImage;
@@ -88,6 +90,16 @@ const boatReceiptSchema = new Schema<IBoatReceipt>(
         validator: Number.isInteger,
         message: 'Trọng lượng (kg) phải là số nguyên dương',
       },
+    },
+    pricePerKg: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     note: {
       type: String,
