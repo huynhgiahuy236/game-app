@@ -16,12 +16,17 @@ class MinesweeperGameScreen extends StatefulWidget {
 }
 
 class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   MinesweeperViewModel? viewModel;
+
+  // Shake & Explosion Animation Controllers
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnim;
+  late final AnimationController _explosionController;
+  List<_ExplosionParticle> _particles = [];
 
-  final TransformationController _transformationController = TransformationController();
+  final TransformationController _transformationController =
+      TransformationController();
 
   // Double-back exit protection
   bool _isDoubleBackWaiting = false;
@@ -38,11 +43,16 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
     super.initState();
     _shakeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 650),
     );
     _shakeAnim = CurvedAnimation(
       parent: _shakeController,
-      curve: Curves.easeOutQuad,
+      curve: Curves.elasticIn,
+    );
+
+    _explosionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
 
     _loadViewModel();
@@ -86,15 +96,43 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
   void _refresh() {
     if (!mounted) return;
     final vm = viewModel;
-    if (vm != null && vm.status == MinesweeperStatus.lost && !_shakeController.isAnimating) {
+    if (vm != null &&
+        vm.status == MinesweeperStatus.lost &&
+        !_shakeController.isAnimating) {
       _triggerExplosionEffect();
     }
     setState(() {});
   }
 
   void _triggerExplosionEffect() {
-    HapticFeedback.heavyImpact();
+    HapticFeedback.lightImpact();
     _shakeController.forward(from: 0.0);
+    _showToast('💥 Mìn nổ! Bấm Ván Mới để thử lại');
+
+    // Generate 45 fire & smoke explosion particles
+    final rand = Random();
+    _particles = List.generate(55, (i) {
+      final angle = rand.nextDouble() * 2 * pi;
+      final speed = 140.0 + rand.nextDouble() * 320.0;
+      final size = 4.0 + rand.nextDouble() * 12.0;
+      final colors = [
+        const Color(0xFFEF4444),
+        const Color(0xFFF59E0B),
+        const Color(0xFFF97316),
+        const Color(0xFFDC2626),
+        const Color(0xFFFEF08A),
+        const Color(0xFF64748B),
+      ];
+      return _ExplosionParticle(
+        angle: angle,
+        speed: speed,
+        size: size,
+        color: colors[rand.nextInt(colors.length)],
+        decay: 0.75 + rand.nextDouble() * 0.25,
+      );
+    });
+
+    _explosionController.forward(from: 0.0);
   }
 
   @override
@@ -104,6 +142,7 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
     viewModel?.removeListener(_refresh);
     viewModel?.dispose();
     _shakeController.dispose();
+    _explosionController.dispose();
     _transformationController.dispose();
     super.dispose();
   }
@@ -158,7 +197,8 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _DifficultySelectionSheet(currentDifficulty: vm.difficulty),
+      builder: (ctx) =>
+          _DifficultySelectionSheet(currentDifficulty: vm.difficulty),
     );
 
     if (selected != null && mounted) {
@@ -166,18 +206,40 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
         _showCustomConfigDialog();
       } else {
         if (vm.firstClickDone && vm.status == MinesweeperStatus.playing) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           final confirm = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: Text('Đổi sang cấp độ ${selected.label}?'),
-              content: const Text('Tiến trình ván Dò Mìn hiện tại sẽ bị xóa.'),
+              backgroundColor:
+                  isDark ? const Color(0xFF141B2D) : Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Đổi sang ${selected.label}?',
+                style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    fontWeight: FontWeight.w800),
+              ),
+              content: Text(
+                'Ván Dò Mìn hiện tại sẽ bị hủy và tính lại từ đầu.',
+                style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B)),
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Hủy'),
+                  child: Text('Hủy',
+                      style: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B))),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(ctx, true),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444)),
                   child: const Text('Đồng ý'),
                 ),
               ],
@@ -224,14 +286,17 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
   @override
   Widget build(BuildContext context) {
     final vm = viewModel;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+
     if (vm == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF080C18) : colors.surface,
+        body: const Center(
+          child: CircularProgressIndicator(color: Color(0xFFEF4444)),
+        ),
       );
     }
-
-    final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final scale = _transformationController.value.getMaxScaleOnAxis();
 
@@ -243,11 +308,59 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF080C18) : const Color(0xFFF7F7FC),
-        body: SafeArea(
-          child: Stack(
-            children: [
-              Column(
+        backgroundColor: isDark ? const Color(0xFF080C18) : colors.surface,
+        body: Stack(
+          children: [
+            // Background Ambient Glow Effects
+            Positioned(
+              top: -80,
+              left: -40,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                      : const Color(0xFFEF4444).withValues(alpha: 0.06),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark
+                          ? const Color(0xFFEF4444).withValues(alpha: 0.2)
+                          : const Color(0xFFEF4444).withValues(alpha: 0.08),
+                      blurRadius: 90,
+                      spreadRadius: 40,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -40,
+              right: -40,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? const Color(0xFF7C3AED).withValues(alpha: 0.12)
+                      : const Color(0xFF7C3AED).withValues(alpha: 0.06),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark
+                          ? const Color(0xFF7C3AED).withValues(alpha: 0.2)
+                          : const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                      blurRadius: 90,
+                      spreadRadius: 40,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            SafeArea(
+              child: Column(
                 children: [
                   // ── Top Header ──────────────────────────────────────────
                   _MinesweeperHeader(
@@ -260,7 +373,7 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
                     onPauseToggle: vm.togglePause,
                   ),
 
-                  // ── Status Bar (Timer & Flag Count) ─────────────────────
+                  // ── Status Bar (HUD Timer & Flag Count) ─────────────────────
                   _MinesweeperStatusBar(vm: vm),
 
                   const SizedBox(height: 8),
@@ -280,24 +393,29 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
                             return AnimatedBuilder(
                               animation: _shakeAnim,
                               builder: (context, child) {
-                                final dx = sin(_shakeAnim.value * pi * 6) *
+                                final dx = sin(_shakeAnim.value * pi * 12) *
+                                    (22 * (1 - _shakeAnim.value));
+                                final dy = cos(_shakeAnim.value * pi * 10) *
                                     (14 * (1 - _shakeAnim.value));
                                 return Transform.translate(
-                                  offset: Offset(dx, 0),
+                                  offset: Offset(dx, dy),
                                   child: child,
                                 );
                               },
                               child: InteractiveViewer(
-                                transformationController: _transformationController,
-                                minScale: 1.0,
-                                maxScale: 3.5,
-                                boundaryMargin: const EdgeInsets.all(40),
+                                panEnabled: vm.difficulty != MinesweeperDifficulty.easy,
+                                scaleEnabled: true,
+                                transformationController:
+                                    _transformationController,
+                                minScale: 0.5,
+                                maxScale: 3.8,
+                                boundaryMargin: const EdgeInsets.all(80.0),
                                 onInteractionUpdate: (_) => setState(() {}),
                                 child: Center(
                                   child: _MinesweeperBoardView(
                                     vm: vm,
-                                    maxWidth: constraints.maxWidth - 24,
-                                    maxHeight: constraints.maxHeight - 24,
+                                    maxWidth: constraints.maxWidth - 20,
+                                    maxHeight: constraints.maxHeight - 20,
                                   ),
                                 ),
                               ),
@@ -305,17 +423,23 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
                           },
                         ),
 
-                        // Floating Reset Zoom Button when zoomed in
+                        // Floating Reset Zoom Button
                         if (scale > 1.08)
                           Positioned(
-                            bottom: 12,
-                            right: 12,
+                            bottom: 14,
+                            right: 14,
                             child: FloatingActionButton.small(
                               onPressed: _resetZoom,
                               tooltip: 'Về kích thước chuẩn',
-                              backgroundColor: colors.surfaceContainerHigh,
-                              foregroundColor: colors.onSurface,
-                              child: const Icon(Icons.zoom_out_map_rounded, size: 18),
+                              backgroundColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : Colors.white,
+                              foregroundColor: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
+                              elevation: 6,
+                              child: const Icon(Icons.zoom_out_map_rounded,
+                                  size: 18),
                             ),
                           ),
                       ],
@@ -326,68 +450,121 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
 
                   // ── Bottom Action Button (Ván mới) ─────────────────────
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                     child: SizedBox(
                       width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _handleNewGameRequest,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(46),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEF4444)
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        icon: const Icon(Icons.refresh_rounded, size: 20),
-                        label: const Text(
-                          'Ván mới',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                        child: ElevatedButton.icon(
+                          onPressed: _handleNewGameRequest,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            minimumSize: const Size.fromHeight(48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          icon: const Icon(Icons.refresh_rounded,
+                              size: 22, color: Colors.white),
+                          label: const Text(
+                            'Ván mới 💣',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
+            ),
 
-              // ── Non-blocking Toast Banner ────────────────────────────────
-              if (_toastMessage != null)
-                Positioned(
-                  top: 60,
-                  left: 20,
-                  right: 20,
-                  child: _ToastBanner(message: _toastMessage!),
-                ),
+            // ── Explosive Screen Red Flash Layer ──────────────────────
+            AnimatedBuilder(
+              animation: _explosionController,
+              builder: (context, _) {
+                final v = _explosionController.value;
+                if (v <= 0 || v >= 1.0) return const SizedBox.shrink();
+                double flashOpacity = 0.0;
+                if (v < 0.15) {
+                  flashOpacity = (v / 0.15) * 0.5;
+                } else if (v < 0.55) {
+                  flashOpacity = (1.0 - (v - 0.15) / 0.4) * 0.5;
+                }
+                return IgnorePointer(
+                  child: Container(
+                    color: const Color(0xFFEF4444)
+                        .withValues(alpha: flashOpacity.clamp(0.0, 1.0)),
+                  ),
+                );
+              },
+            ),
 
-              // ── Pause Overlay ───────────────────────────────────────────
-              if (vm.status == MinesweeperStatus.paused)
-                _MinesweeperPauseOverlay(
-                  onResume: vm.togglePause,
-                  onNewGame: _handleNewGameRequest,
-                ),
+            // ── Shockwave & Fire Particle Explosion Canvas ────────────
+            AnimatedBuilder(
+              animation: _explosionController,
+              builder: (context, _) {
+                final v = _explosionController.value;
+                if (v <= 0 || v >= 1.0) return const SizedBox.shrink();
+                return IgnorePointer(
+                  child: CustomPaint(
+                    size: Size.infinite,
+                    painter: _ExplosionPainter(
+                      progress: v,
+                      particles: _particles,
+                    ),
+                  ),
+                );
+              },
+            ),
 
-              // ── Defeat Overlay ──────────────────────────────────────────
-              if (vm.status == MinesweeperStatus.lost)
-                _MinesweeperLossOverlay(
-                  score: vm.elapsedSeconds,
-                  difficultyLabel: vm.difficulty.label,
-                  revealedCount: vm.board.where((c) => c.state == CellState.revealed && !c.isMine).length,
-                  totalNonMines: vm.totalCells - vm.currentMines,
-                  onRetry: () => vm.startNewGame(),
-                  onNewGame: _showDifficultySheet,
-                  onExit: _handleBackPress,
-                ),
+            // ── Non-blocking Toast Banner ────────────────────────────────
+            if (_toastMessage != null)
+              Positioned(
+                top: 70,
+                left: 20,
+                right: 20,
+                child: _ToastBanner(message: _toastMessage!),
+              ),
 
-              // ── Victory Overlay ─────────────────────────────────────────
-              if (vm.status == MinesweeperStatus.won)
-                _MinesweeperVictoryOverlay(
-                  elapsed: vm.elapsedSeconds,
-                  bestTime: vm.stats.getBestTimeFor(vm.difficulty),
-                  difficultyLabel: vm.difficulty.label,
-                  onRestart: () => vm.startNewGame(),
-                  onChangeDifficulty: _showDifficultySheet,
-                  onExit: _handleBackPress,
-                ),
-            ],
-          ),
+            // ── Pause Overlay ───────────────────────────────────────────
+            if (vm.status == MinesweeperStatus.paused)
+              _MinesweeperPauseOverlay(
+                onResume: vm.togglePause,
+                onNewGame: _handleNewGameRequest,
+              ),
+
+            // ── Victory Overlay ─────────────────────────────────────────
+            if (vm.status == MinesweeperStatus.won)
+              _MinesweeperVictoryOverlay(
+                elapsed: vm.elapsedSeconds,
+                bestTime: vm.stats.getBestTimeFor(vm.difficulty),
+                difficultyLabel: vm.difficulty.label,
+                onRestart: () => vm.startNewGame(),
+                onChangeDifficulty: _showDifficultySheet,
+                onExit: _handleBackPress,
+              ),
+          ],
         ),
       ),
     );
@@ -395,7 +572,78 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  HEADER
+//  EXPLOSION PARTICLE CLASS & CUSTOM PAINTER
+// ───────────────────────────────────────────────────────────────────────────
+
+class _ExplosionParticle {
+  _ExplosionParticle({
+    required this.angle,
+    required this.speed,
+    required this.size,
+    required this.color,
+    required this.decay,
+  });
+
+  final double angle;
+  final double speed;
+  final double size;
+  final Color color;
+  final double decay;
+}
+
+class _ExplosionPainter extends CustomPainter {
+  _ExplosionPainter({
+    required this.progress,
+    required this.particles,
+  });
+
+  final double progress;
+  final List<_ExplosionParticle> particles;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // 1. Expanding Shockwave Ring (Sóng xung kích nổ)
+    if (progress < 0.85) {
+      final ringRadius = (progress / 0.85) * (size.width * 0.7);
+      final ringOpacity = (1.0 - (progress / 0.85)).clamp(0.0, 1.0);
+
+      final ringPaint = Paint()
+        ..color = const Color(0xFFEF4444).withValues(alpha: ringOpacity * 0.75)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8.0 * (1.0 - progress);
+      canvas.drawCircle(center, ringRadius, ringPaint);
+
+      final innerRingPaint = Paint()
+        ..color = const Color(0xFFF59E0B).withValues(alpha: ringOpacity * 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.5;
+      canvas.drawCircle(center, ringRadius * 0.8, innerRingPaint);
+    }
+
+    // 2. Fire & Embers Particle Burst (Hạt lửa & khói nổ tung)
+    final pPaint = Paint();
+    for (final p in particles) {
+      final distance = p.speed * progress;
+      final dx = center.dx + cos(p.angle) * distance;
+      final dy = center.dy + sin(p.angle) * distance + (progress * progress * 110); // Gravity
+      final opacity = (1.0 - (progress / p.decay)).clamp(0.0, 1.0);
+      final particleRadius = p.size * (1.0 - progress * 0.5);
+
+      if (opacity > 0) {
+        pPaint.color = p.color.withValues(alpha: opacity);
+        canvas.drawCircle(Offset(dx, dy), particleRadius, pPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ExplosionPainter oldDelegate) => true;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+//  HEADER (No-overflow responsive header for mobile)
 // ───────────────────────────────────────────────────────────────────────────
 
 class _MinesweeperHeader extends StatelessWidget {
@@ -419,54 +667,115 @@ class _MinesweeperHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: SizedBox(
-        height: 52,
+        height: 48,
         child: Row(
           children: [
-            IconButton(
-              tooltip: 'Quay lại sảnh',
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Dò Mìn',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+            // Back Button
+            InkWell(
+              onTap: onBack,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : colors.outlineVariant,
                   ),
-                  Text(
-                    'Khám phá ô an toàn & tránh mìn nổ',
-                    style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: isDark ? Colors.white : colors.onSurface,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Title & Subtitle (Flexibly shrinking to prevent ANY horizontal overflow)
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFF59E0B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text('💣', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Dò Mìn Pro',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : colors.onSurface,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Text(
+                          'Khám phá ô mìn',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : colors.onSurfaceVariant,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Difficulty Selector Badge
+            const SizedBox(width: 4),
+
+            // Difficulty Chip Selector
             InkWell(
               onTap: onDifficultyTap,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: colors.primaryContainer.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(16),
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : colors.primaryContainer.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: colors.primary.withValues(alpha: 0.3),
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                    width: 1,
                   ),
                 ),
                 child: Row(
@@ -476,38 +785,49 @@ class _MinesweeperHeader extends StatelessWidget {
                       difficulty.label,
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                        color: colors.onPrimaryContainer,
+                        fontSize: 11,
+                        color: isDark
+                            ? const Color(0xFFF8FAFC)
+                            : colors.onPrimaryContainer,
                       ),
                     ),
                     const SizedBox(width: 2),
-                    Icon(Icons.arrow_drop_down_rounded, size: 18, color: colors.onPrimaryContainer),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 16, color: Color(0xFFEF4444)),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(width: 4),
-
             // Sound Toggle
             IconButton(
-              tooltip: soundMuted ? 'Bật âm thanh' : 'Tắt âm thanh',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+              tooltip: soundMuted ? 'Bật âm' : 'Tắt âm',
               onPressed: onSoundToggle,
               icon: Icon(
-                soundMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                size: 20,
-                color: colors.onSurfaceVariant,
+                soundMuted
+                    ? Icons.volume_off_rounded
+                    : Icons.volume_up_rounded,
+                size: 19,
+                color: isDark
+                    ? const Color(0xFF94A3B8)
+                    : colors.onSurfaceVariant,
               ),
             ),
 
             // Pause Button
             IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
               tooltip: isPaused ? 'Tiếp tục' : 'Tạm dừng',
               onPressed: onPauseToggle,
               icon: Icon(
                 isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                size: 22,
-                color: colors.onSurfaceVariant,
+                size: 20,
+                color: isDark
+                    ? const Color(0xFF94A3B8)
+                    : colors.onSurfaceVariant,
               ),
             ),
           ],
@@ -518,7 +838,7 @@ class _MinesweeperHeader extends StatelessWidget {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  STATUS BAR (Timer & Remaining Mine Count)
+//  STATUS BAR (HUD Timer & Flag Count)
 // ───────────────────────────────────────────────────────────────────────────
 
 class _MinesweeperStatusBar extends StatelessWidget {
@@ -527,6 +847,7 @@ class _MinesweeperStatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     final minutes = (vm.elapsedSeconds ~/ 60).toString().padLeft(2, '0');
@@ -535,63 +856,123 @@ class _MinesweeperStatusBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+          color: isDark ? const Color(0xFF1E293B) : colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : colors.outlineVariant,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // Mine Counter Badge
-            Row(
-              children: [
-                const Text('🚩', style: TextStyle(fontSize: 18)),
-                const SizedBox(width: 6),
-                Text(
-                  '${vm.remainingFlags}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: vm.remainingFlags < 0 ? colors.error : colors.onSurface,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : colors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🚩', style: TextStyle(fontSize: 15)),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${vm.remainingFlags}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: vm.remainingFlags < 0
+                          ? const Color(0xFFEF4444)
+                          : (isDark
+                              ? const Color(0xFF38BDF8)
+                              : const Color(0xFF0284C7)),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
 
             // Grid Size Badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: colors.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
+                gradient: isDark
+                    ? const LinearGradient(
+                        colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
+                      )
+                    : LinearGradient(
+                        colors: [
+                          colors.primaryContainer,
+                          colors.primaryContainer.withValues(alpha: 0.8)
+                        ],
+                      ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF818CF8)
+                      : colors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
-                '${vm.currentCols}×${vm.currentRows} · ${vm.currentMines} mìn',
+                '${vm.currentCols}×${vm.currentRows} · ${vm.currentMines} 💣',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: colors.onPrimaryContainer,
+                  fontWeight: FontWeight.w900,
+                  color: isDark
+                      ? const Color(0xFFC7D2FE)
+                      : colors.onPrimaryContainer,
                 ),
               ),
             ),
 
             // Timer Badge
-            Row(
-              children: [
-                const Icon(Icons.timer_outlined, size: 18),
-                const SizedBox(width: 6),
-                Text(
-                  '$minutes:$seconds',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: [FontFeature.tabularFigures()],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : colors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined,
+                      size: 16, color: Color(0xFFF59E0B)),
+                  const SizedBox(width: 5),
+                  Text(
+                    '$minutes:$seconds',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: isDark
+                          ? const Color(0xFFFBBF24)
+                          : const Color(0xFFD97706),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -610,37 +991,123 @@ class _MinesweeperModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SegmentedButton<bool>(
-        segments: const [
-          ButtonSegment<bool>(
-            value: false,
-            icon: Icon(Icons.touch_app_rounded, size: 18),
-            label: Text('Mở ô'),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : colors.outlineVariant,
           ),
-          ButtonSegment<bool>(
-            value: true,
-            icon: Icon(Icons.flag_rounded, size: 18),
-            label: Text('Cắm cờ 🚩'),
-          ),
-        ],
-        selected: {vm.flagMode},
-        onSelectionChanged: (val) {
-          HapticFeedback.selectionClick();
-          vm.toggleFlagMode();
-        },
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          backgroundColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected)
-                ? colors.primaryContainer
-                : colors.surfaceContainerLow,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _ToggleButton(
+                selected: !vm.flagMode,
+                icon: Icons.touch_app_rounded,
+                label: 'Mở ô 🔍',
+                activeGradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                ),
+                unselectedColor:
+                    isDark ? const Color(0xFF94A3B8) : colors.onSurfaceVariant,
+                onTap: () {
+                  if (vm.flagMode) {
+                    HapticFeedback.selectionClick();
+                    vm.toggleFlagMode();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _ToggleButton(
+                selected: vm.flagMode,
+                icon: Icons.flag_rounded,
+                label: 'Cắm cờ 🚩',
+                activeGradient: const LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                ),
+                unselectedColor:
+                    isDark ? const Color(0xFF94A3B8) : colors.onSurfaceVariant,
+                onTap: () {
+                  if (!vm.flagMode) {
+                    HapticFeedback.selectionClick();
+                    vm.toggleFlagMode();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToggleButton extends StatelessWidget {
+  const _ToggleButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.activeGradient,
+    required this.unselectedColor,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final Gradient activeGradient;
+  final Color unselectedColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          gradient: selected ? activeGradient : null,
+          color: selected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: (activeGradient as LinearGradient)
+                        .colors
+                        .first
+                        .withValues(alpha: 0.35),
+                    blurRadius: 8,
+                  )
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: selected ? Colors.white : unselectedColor),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                  color: selected ? Colors.white : unselectedColor,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -649,7 +1116,7 @@ class _MinesweeperModeToggle extends StatelessWidget {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  BOARD VIEW (Render 16x16, 9x9, 16x30, Custom grid)
+//  BOARD VIEW (Adaptive Light/Dark Board Container)
 // ───────────────────────────────────────────────────────────────────────────
 
 class _MinesweeperBoardView extends StatelessWidget {
@@ -665,40 +1132,50 @@ class _MinesweeperBoardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
+
     final cols = vm.currentCols;
     final rows = vm.currentRows;
 
-    // Calculate optimal cell size based on grid dimensions
-    final idealW = (maxWidth - (cols - 1) * 3) / cols;
-    final idealH = (maxHeight - (rows - 1) * 3) / rows;
-
-    double cellSize = min(idealW, idealH);
+    double cellSize;
     if (vm.difficulty == MinesweeperDifficulty.easy) {
-      cellSize = cellSize.clamp(32.0, 48.0);
+      final idealW = (maxWidth - (cols - 1) * 3) / cols;
+      final idealH = (maxHeight - (rows - 1) * 3) / rows;
+      cellSize = min(idealW, idealH).clamp(34.0, 52.0);
+    } else if (vm.difficulty == MinesweeperDifficulty.medium) {
+      cellSize = 32.0;
     } else {
-      cellSize = cellSize.clamp(28.0, 44.0);
+      cellSize = 30.0;
     }
 
     final boardW = cellSize * cols + (cols - 1) * 3;
     final boardH = cellSize * rows + (rows - 1) * 3;
+
+    final isLost = vm.status == MinesweeperStatus.lost;
+    final isWon = vm.status == MinesweeperStatus.won;
+
+    Color borderColor =
+        isDark ? const Color(0xFF334155) : colors.outlineVariant;
+    if (isLost) borderColor = const Color(0xFFEF4444);
+    if (isWon) borderColor = const Color(0xFF10B981);
 
     return Container(
       width: boardW + 16,
       height: boardH + 16,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
+        color: isDark ? const Color(0xFF0B0F19) : const Color(0xFFCBD5E1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: colors.outlineVariant.withValues(alpha: 0.6),
-          width: 2,
+          color: borderColor,
+          width: 2.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow.withValues(alpha: 0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: borderColor.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: -3,
           ),
         ],
       ),
@@ -717,9 +1194,12 @@ class _MinesweeperBoardView extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final cell = vm.board[index];
+              final row = index ~/ cols;
+              final col = index % cols;
+              final isEven = (row + col) % 2 == 0;
+
               return Listener(
                 onPointerDown: (event) {
-                  // Desktop right click support
                   if (event.buttons == kSecondaryButton) {
                     vm.toggleFlag(index);
                   }
@@ -727,6 +1207,7 @@ class _MinesweeperBoardView extends StatelessWidget {
                 child: _MineTile(
                   cell: cell,
                   cellSize: cellSize,
+                  isEven: isEven,
                   onTap: () => vm.handleCellTap(index),
                   onLongPress: () {
                     HapticFeedback.lightImpact();
@@ -743,55 +1224,97 @@ class _MinesweeperBoardView extends StatelessWidget {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  SINGLE MINE TILE (3D tactile hidden vs flat revealed)
+//  SINGLE MINE TILE (Adaptive Light/Dark Tactile Tile)
 // ───────────────────────────────────────────────────────────────────────────
 
 class _MineTile extends StatelessWidget {
   const _MineTile({
     required this.cell,
     required this.cellSize,
+    required this.isEven,
     required this.onTap,
     required this.onLongPress,
   });
 
   final MineCell cell;
   final double cellSize;
+  final bool isEven;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Color bg;
+    Gradient? bgGradient;
+    Color? bgColor;
     Border border;
     List<BoxShadow>? shadows;
 
     if (cell.exploded) {
-      bg = const Color(0xFFEF4444);
-      border = Border.all(color: const Color(0xFF991B1B), width: 1.5);
-    } else if (cell.isIncorrectFlag) {
-      bg = const Color(0xFFFCA5A5);
-      border = Border.all(color: const Color(0xFFDC2626), width: 1.5);
-    } else if (cell.state == CellState.revealed) {
-      bg = isDark ? const Color(0xFF1E293B) : Colors.white;
-      border = Border.all(
-        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        width: 0.5,
+      bgGradient = const LinearGradient(
+        colors: [Color(0xFFEF4444), Color(0xFF991B1B)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       );
-    } else {
-      // Hidden state: 3D tactile tile with 3px bottom shadow
-      bg = isDark ? const Color(0xFF2A344D) : const Color(0xFFE2DFEE);
-      final shadowColor = isDark ? const Color(0xFF1B2336) : const Color(0xFFB9B4CF);
-      border = Border.all(color: shadowColor, width: 1.2);
+      border = Border.all(color: const Color(0xFFFCA5A5), width: 1.5);
       shadows = [
         BoxShadow(
-          color: shadowColor.withValues(alpha: 0.8),
-          blurRadius: 0,
-          offset: const Offset(0, 3),
+          color: const Color(0xFFEF4444).withValues(alpha: 0.6),
+          blurRadius: 8,
         ),
       ];
+    } else if (cell.isIncorrectFlag) {
+      bgColor = isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5);
+      border = Border.all(color: const Color(0xFFEF4444), width: 1.5);
+    } else if (cell.state == CellState.revealed) {
+      // REVEALED (Đã mở): Sunken Soft Muted Terrain Surface
+      if (isDark) {
+        bgColor = isEven ? const Color(0xFF0F172A) : const Color(0xFF090E17);
+        border = Border.all(color: const Color(0xFF1E293B), width: 0.6);
+      } else {
+        // Light Mode: Soft Muted Powder Slate
+        bgColor = isEven ? const Color(0xFFF0F4F8) : const Color(0xFFE4E9F0);
+        border = Border.all(color: const Color(0xFFD9E2EC), width: 0.6);
+      }
+      shadows = null; // Flat sunken terrain
+    } else {
+      // UNREVEALED (Chưa mở - Hidden): Soothing 3D Muted Slate Keys (0% Glare)
+      if (isDark) {
+        // Dark Mode: Deep Muted Steel Blue 3D Keys
+        bgGradient = LinearGradient(
+          colors: isEven
+              ? const [Color(0xFF334155), Color(0xFF293548)]
+              : const [Color(0xFF2C394B), Color(0xFF212C3B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+        border = Border.all(color: const Color(0xFF475569), width: 1.0);
+        shadows = [
+          const BoxShadow(
+            color: Color(0xFF0F172A),
+            blurRadius: 0,
+            offset: Offset(0, 3.0),
+          ),
+        ];
+      } else {
+        // Light Mode: Soft Muted Nordic Blue-Slate Keys
+        bgGradient = LinearGradient(
+          colors: isEven
+              ? const [Color(0xFFBCCCDC), Color(0xFF9FB3C8)]
+              : const [Color(0xFFA6B9CB), Color(0xFF8DA4BC)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+        border = Border.all(color: const Color(0xFF829AB1), width: 1.0);
+        shadows = [
+          const BoxShadow(
+            color: Color(0xFF627D98),
+            blurRadius: 0,
+            offset: Offset(0, 3.0),
+          ),
+        ];
+      }
     }
 
     return Material(
@@ -802,20 +1325,21 @@ class _MineTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(cellSize > 36 ? 8 : 6),
         child: Container(
           decoration: BoxDecoration(
-            color: bg,
+            color: bgColor,
+            gradient: bgGradient,
             borderRadius: BorderRadius.circular(cellSize > 36 ? 8 : 6),
             border: border,
             boxShadow: shadows,
           ),
           child: Center(
-            child: _buildCellContent(colors),
+            child: _buildCellContent(isDark),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCellContent(ColorScheme colors) {
+  Widget _buildCellContent(bool isDark) {
     if (cell.exploded) {
       return const Text('💥', style: TextStyle(fontSize: 16));
     }
@@ -840,35 +1364,67 @@ class _MineTile extends StatelessWidget {
             style: TextStyle(
               fontSize: max(12, cellSize * 0.52),
               fontWeight: FontWeight.w900,
-              color: _getMineNumberColor(cell.adjacentMines),
+              color: _getMineNumberColor(cell.adjacentMines, isDark),
             ),
           ),
         );
       }
+      // Blank revealed tile: show a tiny subtle dot for visual confirmation
+      return Container(
+        width: 3,
+        height: 3,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+        ),
+      );
     }
     return const SizedBox.shrink();
   }
 
-  Color _getMineNumberColor(int number) {
-    switch (number) {
-      case 1:
-        return const Color(0xFF0EA5E9); // Blue Cyan
-      case 2:
-        return const Color(0xFF16A34A); // Emerald Green
-      case 3:
-        return const Color(0xFFDC2626); // Bright Red
-      case 4:
-        return const Color(0xFF7C3AED); // Deep Purple
-      case 5:
-        return const Color(0xFF991B1B); // Dark Red
-      case 6:
-        return const Color(0xFF0D9488); // Teal
-      case 7:
-        return const Color(0xFF334155); // Dark Neutral
-      case 8:
-        return const Color(0xFF64748B); // Slate Gray
-      default:
-        return const Color(0xFF64748B);
+  Color _getMineNumberColor(int number, bool isDark) {
+    if (isDark) {
+      switch (number) {
+        case 1:
+          return const Color(0xFF38BDF8); // Vibrant Cyan Blue
+        case 2:
+          return const Color(0xFF4ADE80); // Emerald Green
+        case 3:
+          return const Color(0xFFF87171); // Crimson Red
+        case 4:
+          return const Color(0xFFA855F7); // Royal Purple
+        case 5:
+          return const Color(0xFFFBBF24); // Amber Gold
+        case 6:
+          return const Color(0xFF2DD4BF); // Vibrant Teal
+        case 7:
+          return const Color(0xFFF1F5F9); // Crisp White
+        case 8:
+          return const Color(0xFF94A3B8); // Slate Gray
+        default:
+          return const Color(0xFF94A3B8);
+      }
+    } else {
+      switch (number) {
+        case 1:
+          return const Color(0xFF0284C7); // Rich Royal Blue
+        case 2:
+          return const Color(0xFF16A34A); // Deep Emerald Green
+        case 3:
+          return const Color(0xFFDC2626); // Deep Crimson Red
+        case 4:
+          return const Color(0xFF7C3AED); // Deep Violet
+        case 5:
+          return const Color(0xFFD97706); // Dark Amber
+        case 6:
+          return const Color(0xFF0D9488); // Deep Teal
+        case 7:
+          return const Color(0xFF334155); // Dark Charcoal
+        case 8:
+          return const Color(0xFF64748B); // Slate Gray
+        default:
+          return const Color(0xFF64748B);
+      }
     }
   }
 }
@@ -888,6 +1444,7 @@ class _MinesweeperPauseOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Positioned.fill(
@@ -899,164 +1456,100 @@ class _MinesweeperPauseOverlay extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             constraints: const BoxConstraints(maxWidth: 360),
             decoration: BoxDecoration(
-              color: Theme.of(context).dialogTheme.backgroundColor ?? colors.surfaceContainerLow,
+              color: isDark ? const Color(0xFF1E293B) : colors.surface,
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                  color: isDark ? const Color(0xFF7C3AED) : colors.primary),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? const Color(0xFF7C3AED).withValues(alpha: 0.4)
+                      : Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 26,
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.pause_circle_rounded, size: 56, color: Color(0xFF7C3AED)),
+                Icon(Icons.pause_circle_rounded,
+                    size: 56,
+                    color: isDark ? const Color(0xFFA78BFA) : colors.primary),
                 const SizedBox(height: 12),
                 Text(
-                  'Đã Tạm Dừng',
+                  'Tạm Dừng',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    color: colors.onSurface,
+                    color: isDark ? Colors.white : colors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Đồng hồ đang dừng. Bấm tiếp tục để chơi tiếp.',
+                  'Đồng hồ đang tạm dừng. Bấm tiếp tục để chơi tiếp.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : colors.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: onResume,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      minimumSize: const Size.fromHeight(46),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7C3AED), Color(0xFF4C1D95)],
+                      ),
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Tiếp tục chơi', style: TextStyle(fontWeight: FontWeight.w800)),
+                    child: ElevatedButton.icon(
+                      onPressed: onResume,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded,
+                          color: Colors.white),
+                      label: const Text('Tiếp tục chơi',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: onNewGame,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(44),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF475569)
+                            : colors.outlineVariant,
+                      ),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Ván mới', style: TextStyle(fontWeight: FontWeight.w700)),
+                    icon: Icon(Icons.refresh_rounded,
+                        size: 18,
+                        color: isDark
+                            ? const Color(0xFF94A3B8)
+                            : colors.onSurfaceVariant),
+                    label: Text('Ván mới',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? const Color(0xFFE2E8F0)
+                                : colors.onSurface)),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-//  DEFEAT OVERLAY
-// ───────────────────────────────────────────────────────────────────────────
-
-class _MinesweeperLossOverlay extends StatelessWidget {
-  const _MinesweeperLossOverlay({
-    required this.score,
-    required this.difficultyLabel,
-    required this.revealedCount,
-    required this.totalNonMines,
-    required this.onRetry,
-    required this.onNewGame,
-    required this.onExit,
-  });
-
-  final int score;
-  final String difficultyLabel;
-  final int revealedCount;
-  final int totalNonMines;
-  final VoidCallback onRetry;
-  final VoidCallback onNewGame;
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Positioned.fill(
-      child: ColoredBox(
-        color: Colors.black.withValues(alpha: 0.6),
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(24),
-            constraints: const BoxConstraints(maxWidth: 360),
-            decoration: BoxDecoration(
-              color: Theme.of(context).dialogTheme.backgroundColor ?? colors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFEF4444)),
-                const SizedBox(height: 12),
-                Text(
-                  'Mìn Đã Nổ!',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: colors.onSurface,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Cấp độ: $difficultyLabel\nĐã mở được: $revealedCount/$totalNonMines ô an toàn',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colors.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: onRetry,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      minimumSize: const Size.fromHeight(46),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Thử lại', style: TextStyle(fontWeight: FontWeight.w800)),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: onNewGame,
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Chọn độ khó khác', style: TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: onExit,
-                  child: const Text('Về danh sách trò chơi', style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ],
             ),
@@ -1090,70 +1583,85 @@ class _MinesweeperVictoryOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
+
     final minutes = (elapsed ~/ 60).toString().padLeft(2, '0');
     final seconds = (elapsed % 60).toString().padLeft(2, '0');
-
     final isNewRecord = bestTime == elapsed;
 
     return Positioned.fill(
       child: ColoredBox(
-        color: Colors.black.withValues(alpha: 0.65),
+        color: Colors.black.withValues(alpha: 0.75),
         child: Center(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 24),
             padding: const EdgeInsets.all(24),
             constraints: const BoxConstraints(maxWidth: 360),
             decoration: BoxDecoration(
-              color: Theme.of(context).dialogTheme.backgroundColor ?? colors.surfaceContainerLow,
+              color: isDark ? const Color(0xFF1E293B) : colors.surface,
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                  width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                  blurRadius: 26,
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('🎉', style: TextStyle(fontSize: 56)),
+                const Text('🎉', style: TextStyle(fontSize: 52)),
                 const SizedBox(height: 12),
-                Text(
-                  'Dò Mìn Hoàn Hảo!',
+                const Text(
+                  'RÀ PHÁ THÀNH CÔNG!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: colors.onSurface,
+                    color: Color(0xFF10B981),
+                    letterSpacing: 0.5,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Bạn đã rà phá toàn bộ mìn an toàn cấp độ $difficultyLabel trong $minutes:$seconds!',
+                  'Bạn đã tháo gỡ toàn bộ mìn ($difficultyLabel) trong $minutes:$seconds!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: colors.onSurfaceVariant,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : colors.onSurfaceVariant,
                     height: 1.4,
                   ),
                 ),
                 if (isNewRecord) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF08A),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                      ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFEAB308)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                          blurRadius: 10,
+                        ),
+                      ],
                     ),
                     child: const Text(
                       '🏆 KỶ LỤC MỚI!',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF713F12),
+                        color: Colors.white,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -1161,33 +1669,63 @@ class _MinesweeperVictoryOverlay extends StatelessWidget {
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: onRestart,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      minimumSize: const Size.fromHeight(46),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF10B981), Color(0xFF059669)],
+                      ),
                     ),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Chơi ván tiếp', style: TextStyle(fontWeight: FontWeight.w800)),
+                    child: ElevatedButton.icon(
+                      onPressed: onRestart,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const Icon(Icons.refresh_rounded,
+                          color: Colors.white),
+                      label: const Text('Chơi ván tiếp',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: onChangeDifficulty,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(44),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF475569)
+                            : colors.outlineVariant,
+                      ),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text('Chọn độ khó khác', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text('Chọn độ khó khác',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? const Color(0xFFE2E8F0)
+                                : colors.onSurface)),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 TextButton(
                   onPressed: onExit,
-                  child: const Text('Về danh sách trò chơi', style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: Text('Về sảnh trò chơi',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? const Color(0xFF64748B)
+                              : colors.onSurfaceVariant)),
                 ),
               ],
             ),
@@ -1208,6 +1746,7 @@ class _DifficultySelectionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Container(
@@ -1218,7 +1757,7 @@ class _DifficultySelectionSheet extends StatelessWidget {
         MediaQuery.of(context).padding.bottom + 20,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).bottomSheetTheme.backgroundColor ?? colors.surfaceContainerLow,
+        color: isDark ? const Color(0xFF141B2D) : colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -1230,18 +1769,18 @@ class _DifficultySelectionSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: colors.outlineVariant,
+                color: isDark ? const Color(0xFF475569) : colors.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Chọn độ khó Dò Mìn',
+            'Chọn độ khó Dò Mìn 💣',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: colors.onSurface,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : colors.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -1272,26 +1811,39 @@ class _DifficultyOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: isSelected ? colors.primaryContainer.withValues(alpha: 0.5) : colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: isSelected
+            ? (isDark
+                ? const Color(0xFF7C3AED).withValues(alpha: 0.2)
+                : colors.primaryContainer.withValues(alpha: 0.5))
+            : (isDark ? const Color(0xFF1E293B) : colors.surfaceContainerLow),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isSelected ? colors.primary : colors.outlineVariant.withValues(alpha: 0.5),
+          color: isSelected
+              ? (isDark ? const Color(0xFF7C3AED) : colors.primary)
+              : (isDark ? const Color(0xFF334155) : colors.outlineVariant),
           width: isSelected ? 2 : 1,
         ),
       ),
       child: ListTile(
         onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         leading: Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: isSelected ? colors.primary : colors.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(10),
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFF7C3AED), Color(0xFF4C1D95)])
+                : null,
+            color: isSelected
+                ? null
+                : (isDark ? const Color(0xFF334155) : colors.surfaceContainerHigh),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
             child: Text(
@@ -1299,7 +1851,9 @@ class _DifficultyOptionTile extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 11,
-                color: isSelected ? colors.onPrimary : colors.onSurface,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? Colors.white : colors.onSurface),
               ),
             ),
           ),
@@ -1309,19 +1863,21 @@ class _DifficultyOptionTile extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 15,
-            color: colors.onSurface,
+            color: isDark ? Colors.white : colors.onSurface,
           ),
         ),
         subtitle: Text(
           difficulty.subtitle,
           style: TextStyle(
             fontSize: 12,
-            color: colors.onSurfaceVariant,
+            color: isDark ? const Color(0xFF94A3B8) : colors.onSurfaceVariant,
           ),
         ),
         trailing: isSelected
-            ? Icon(Icons.check_circle_rounded, color: colors.primary)
-            : const Icon(Icons.chevron_right_rounded),
+            ? Icon(Icons.check_circle_rounded,
+                color: isDark ? const Color(0xFFA78BFA) : colors.primary)
+            : Icon(Icons.chevron_right_rounded,
+                color: isDark ? const Color(0xFF64748B) : colors.outline),
       ),
     );
   }
@@ -1356,7 +1912,8 @@ class _CustomDifficultyDialog extends StatefulWidget {
   final int initialMines;
 
   @override
-  State<_CustomDifficultyDialog> createState() => _CustomDifficultyDialogState();
+  State<_CustomDifficultyDialog> createState() =>
+      _CustomDifficultyDialogState();
 }
 
 class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
@@ -1374,7 +1931,7 @@ class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
   }
 
   void _validate() {
-    final maxMines = (rows * cols * 0.4).floor(); // Max 40% mines
+    final maxMines = (rows * cols * 0.4).floor();
     if (rows < 6 || rows > 30) {
       errorMessage = 'Số hàng phải từ 6 đến 30';
     } else if (cols < 6 || cols > 30) {
@@ -1389,22 +1946,37 @@ class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
     final maxMines = (rows * cols * 0.4).floor();
 
     return AlertDialog(
-      title: const Text('Bàn chơi Tùy chỉnh'),
+      backgroundColor: isDark ? const Color(0xFF141B2D) : colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Bàn chơi Tùy chỉnh ⚙️',
+        style: TextStyle(
+            color: isDark ? Colors.white : colors.onSurface,
+            fontWeight: FontWeight.w900),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Số hàng: $rows'),
+            Text('Số hàng: $rows',
+                style: TextStyle(
+                    color: isDark ? Colors.white : colors.onSurface,
+                    fontWeight: FontWeight.w700)),
             Slider(
               value: rows.toDouble(),
               min: 6,
               max: 30,
               divisions: 24,
+              activeColor: const Color(0xFFEF4444),
+              inactiveColor: isDark
+                  ? const Color(0xFF334155)
+                  : colors.outlineVariant,
               label: '$rows',
               onChanged: (v) {
                 rows = v.toInt();
@@ -1413,12 +1985,19 @@ class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
               },
             ),
             const SizedBox(height: 8),
-            Text('Số cột: $cols'),
+            Text('Số cột: $cols',
+                style: TextStyle(
+                    color: isDark ? Colors.white : colors.onSurface,
+                    fontWeight: FontWeight.w700)),
             Slider(
               value: cols.toDouble(),
               min: 6,
               max: 30,
               divisions: 24,
+              activeColor: const Color(0xFFEF4444),
+              inactiveColor: isDark
+                  ? const Color(0xFF334155)
+                  : colors.outlineVariant,
               label: '$cols',
               onChanged: (v) {
                 cols = v.toInt();
@@ -1427,12 +2006,19 @@ class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
               },
             ),
             const SizedBox(height: 8),
-            Text('Số mìn: $mines (Tối đa $maxMines)'),
+            Text('Số mìn: $mines (Tối đa $maxMines)',
+                style: TextStyle(
+                    color: isDark ? Colors.white : colors.onSurface,
+                    fontWeight: FontWeight.w700)),
             Slider(
               value: mines.toDouble().clamp(1.0, maxMines.toDouble()),
               min: 1,
               max: maxMines.toDouble(),
               divisions: max(1, maxMines - 1),
+              activeColor: const Color(0xFFF59E0B),
+              inactiveColor: isDark
+                  ? const Color(0xFF334155)
+                  : colors.outlineVariant,
               label: '$mines',
               onChanged: (v) {
                 mines = v.toInt();
@@ -1444,7 +2030,10 @@ class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   errorMessage!,
-                  style: TextStyle(color: colors.error, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
           ],
@@ -1453,12 +2042,19 @@ class _CustomDifficultyDialogState extends State<_CustomDifficultyDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy'),
+          child: Text('Hủy',
+              style: TextStyle(
+                  color: isDark
+                      ? const Color(0xFF94A3B8)
+                      : colors.onSurfaceVariant)),
         ),
         FilledButton(
           onPressed: errorMessage == null
-              ? () => Navigator.pop(context, {'rows': rows, 'cols': cols, 'mines': mines})
+              ? () => Navigator.pop(
+                  context, {'rows': rows, 'cols': cols, 'mines': mines})
               : null,
+          style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444)),
           child: const Text('Tạo bàn'),
         ),
       ],
@@ -1483,14 +2079,18 @@ class _ResumeGameSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
-    final minutes = (savedState.elapsedSeconds ~/ 60).toString().padLeft(2, '0');
-    final seconds = (savedState.elapsedSeconds % 60).toString().padLeft(2, '0');
+
+    final minutes =
+        (savedState.elapsedSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds =
+        (savedState.elapsedSeconds % 60).toString().padLeft(2, '0');
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       decoration: BoxDecoration(
-        color: Theme.of(context).bottomSheetTheme.backgroundColor ?? colors.surfaceContainerLow,
+        color: isDark ? const Color(0xFF141B2D) : colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -1500,19 +2100,21 @@ class _ResumeGameSheet extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: colors.outlineVariant,
+              color: isDark ? const Color(0xFF475569) : colors.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
-          const Icon(Icons.bookmark_rounded, size: 40, color: Color(0xFF7C3AED)),
+          Icon(Icons.bookmark_rounded,
+              size: 44,
+              color: isDark ? const Color(0xFFA78BFA) : colors.primary),
           const SizedBox(height: 12),
           Text(
             'Tiếp tục ván chơi dở?',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: colors.onSurface,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : colors.onSurface,
             ),
           ),
           const SizedBox(height: 6),
@@ -1521,22 +2123,35 @@ class _ResumeGameSheet extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: colors.onSurfaceVariant,
+              color: isDark
+                  ? const Color(0xFF94A3B8)
+                  : colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: onResume,
-              style: FilledButton.styleFrom(
-                backgroundColor: colors.primary,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFF4C1D95)],
                 ),
               ),
-              child: const Text('Tiếp tục ván đang chơi', style: TextStyle(fontWeight: FontWeight.w800)),
+              child: ElevatedButton(
+                onPressed: onResume,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Tiếp tục ván đang chơi',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900, color: Colors.white)),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1546,7 +2161,11 @@ class _ResumeGameSheet extends StatelessWidget {
               onPressed: onNewGame,
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
-                side: BorderSide(color: colors.outlineVariant),
+                side: BorderSide(
+                  color: isDark
+                      ? const Color(0xFF475569)
+                      : colors.outlineVariant,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1554,7 +2173,9 @@ class _ResumeGameSheet extends StatelessWidget {
               child: Text(
                 'Bắt đầu ván mới',
                 style: TextStyle(
-                  color: colors.onSurfaceVariant,
+                  color: isDark
+                      ? const Color(0xFFE2E8F0)
+                      : colors.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1575,12 +2196,13 @@ class _NewGameConfirmationSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       decoration: BoxDecoration(
-        color: Theme.of(context).bottomSheetTheme.backgroundColor ?? colors.surfaceContainerLow,
+        color: isDark ? const Color(0xFF141B2D) : colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -1590,19 +2212,20 @@ class _NewGameConfirmationSheet extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: colors.outlineVariant,
+              color: isDark ? const Color(0xFF475569) : colors.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
-          const Icon(Icons.help_outline_rounded, size: 36, color: Color(0xFF7C3AED)),
+          const Icon(Icons.help_outline_rounded,
+              size: 40, color: Color(0xFFEF4444)),
           const SizedBox(height: 12),
           Text(
             'Bắt đầu ván mới?',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: colors.onSurface,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : colors.onSurface,
             ),
           ),
           const SizedBox(height: 6),
@@ -1611,40 +2234,59 @@ class _NewGameConfirmationSheet extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: colors.onSurfaceVariant,
+              color: isDark
+                  ? const Color(0xFF94A3B8)
+                  : colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.pop(context, false),
-              style: FilledButton.styleFrom(
-                backgroundColor: colors.primary,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
                 ),
               ),
-              child: const Text('Tiếp tục chơi', style: TextStyle(fontWeight: FontWeight.w800)),
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Bắt đầu ván mới',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900, color: Colors.white)),
+              ),
             ),
           ),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(context, false),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
-                side: BorderSide(color: colors.outlineVariant),
+                side: BorderSide(
+                  color: isDark
+                      ? const Color(0xFF475569)
+                      : colors.outlineVariant,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: Text(
-                'Bắt đầu ván mới',
+                'Tiếp tục chơi ván cũ',
                 style: TextStyle(
-                  color: colors.onSurfaceVariant,
+                  color: isDark
+                      ? const Color(0xFFE2E8F0)
+                      : colors.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1666,19 +2308,22 @@ class _ToastBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return IgnorePointer(
       child: Center(
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF7C3AED)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 10,
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                  blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -1686,7 +2331,8 @@ class _ToastBanner extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.info_outline_rounded, color: Color(0xFFA78BFA), size: 18),
+                const Icon(Icons.info_outline_rounded,
+                    color: Color(0xFFA78BFA), size: 18),
                 const SizedBox(width: 8),
                 Text(
                   message,

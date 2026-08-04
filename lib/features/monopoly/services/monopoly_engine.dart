@@ -51,17 +51,17 @@ class MonopolyEngine {
   }
 
   static const List<MonopolyCard> chanceCards = [
-    MonopolyCard(title: 'Trúng Xổ Số!', description: 'Bạn nhận được thưởng \$100.', cashChange: 100),
-    MonopolyCard(title: 'Bảo Trì Xe', description: 'Nộp phí sửa xe \$50.', cashChange: -50),
-    MonopolyCard(title: 'Tăng Lương', description: 'Công ty thưởng \$150.', cashChange: 150),
-    MonopolyCard(title: 'Du Lịch Đà Nẵng', description: 'Di chuyển thẳng tới Đà Nẵng.', cashChange: 0, movePosition: 16),
+    MonopolyCard(title: 'Trúng Xổ Số!', description: 'Bạn nhận được thưởng \$100.', cashChange: 100, isChance: true),
+    MonopolyCard(title: 'Bảo Trì Xe', description: 'Nộp phí sửa xe \$50.', cashChange: -50, isChance: true),
+    MonopolyCard(title: 'Tăng Lương', description: 'Công ty thưởng \$150.', cashChange: 150, isChance: true),
+    MonopolyCard(title: 'Du Lịch Đà Nẵng', description: 'Di chuyển thẳng tới Đà Nẵng.', cashChange: 0, movePosition: 16, isChance: true),
   ];
 
   static const List<MonopolyCard> communityCards = [
-    MonopolyCard(title: 'Đền Bồi Thường', description: 'Nhận \$80 từ bảo hiểm.', cashChange: 80),
-    MonopolyCard(title: 'Đóng Quỹ Từ Thiện', description: 'Ủng hộ \$40 cho cộng đồng.', cashChange: -40),
-    MonopolyCard(title: 'Tế Tổ Thành Công', description: 'Nhận lộc \$120.', cashChange: 120),
-    MonopolyCard(title: 'Vé Máy Bay', description: 'Bay thẳng tới TP.HCM Nguyễn Huệ.', cashChange: 0, movePosition: 27),
+    MonopolyCard(title: 'Đền Bồi Thường', description: 'Nhận \$80 từ bảo hiểm.', cashChange: 80, isChance: false),
+    MonopolyCard(title: 'Đóng Quỹ Từ Thiện', description: 'Ủng hộ \$40 cho cộng đồng.', cashChange: -40, isChance: false),
+    MonopolyCard(title: 'Tế Tổ Thành Công', description: 'Nhận lộc \$120.', cashChange: 120, isChance: false),
+    MonopolyCard(title: 'Vé Máy Bay', description: 'Bay thẳng tới TP.HCM Nguyễn Huệ.', cashChange: 0, movePosition: 27, isChance: false),
   ];
 
   static MonopolyCard drawChance() => chanceCards[_random.nextInt(chanceCards.length)];
@@ -69,7 +69,15 @@ class MonopolyEngine {
 
   /// AI decision: Returns true if AI wants to buy property
   static bool aiShouldBuy(MonopolyPlayer player, MonopolyTile tile) {
-    if (player.cash >= tile.price + 100) return true;
+    if (player.cash >= tile.price + 80) return true;
+    return false;
+  }
+
+  /// AI decision: Returns true if AI wants to build house
+  static bool aiShouldBuild(MonopolyPlayer player, MonopolyTile tile) {
+    if (tile.ownerId == player.id && tile.houses < 5 && player.cash >= tile.houseCost + 200) {
+      return true;
+    }
     return false;
   }
 }

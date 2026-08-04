@@ -13,6 +13,8 @@ import '../../minesweeper/services/minesweeper_repository.dart';
 import '../../minesweeper/views/minesweeper_game_screen.dart';
 import '../../monopoly/services/monopoly_repository.dart';
 import '../../monopoly/views/monopoly_game_screen.dart';
+import '../../block_puzzle/services/block_puzzle_repository.dart';
+import '../../block_puzzle/views/block_puzzle_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  HubScreen — root nav (3 tabs)
@@ -26,6 +28,7 @@ class HubScreen extends StatefulWidget {
     required this.caroRepository,
     required this.minesweeperRepository,
     required this.monopolyRepository,
+    required this.blockPuzzleRepository,
     required this.onThemeChanged,
   });
   final SudokuRepository repository;
@@ -33,6 +36,7 @@ class HubScreen extends StatefulWidget {
   final CaroRepository caroRepository;
   final MinesweeperRepository minesweeperRepository;
   final MonopolyRepository monopolyRepository;
+  final BlockPuzzleRepository blockPuzzleRepository;
   final ValueChanged<ThemeMode> onThemeChanged;
 
   @override
@@ -179,6 +183,16 @@ class _HubScreenState extends State<HubScreen>
             MaterialPageRoute(
               builder: (_) => MonopolyGameScreen(
                   repository: widget.monopolyRepository),
+            ),
+          );
+          _load();
+        },
+        onPlayBlockPuzzle: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlockPuzzleScreen(
+                  repository: widget.blockPuzzleRepository),
             ),
           );
           _load();
@@ -383,6 +397,7 @@ class _GamesTab extends StatefulWidget {
     required this.onPlayCaro,
     required this.onPlayMinesweeper,
     required this.onPlayMonopoly,
+    required this.onPlayBlockPuzzle,
   });
   final bool loading;
   final SudokuGame? saved;
@@ -393,6 +408,7 @@ class _GamesTab extends StatefulWidget {
   final VoidCallback onPlayCaro;
   final VoidCallback onPlayMinesweeper;
   final VoidCallback onPlayMonopoly;
+  final VoidCallback onPlayBlockPuzzle;
 
   @override
   State<_GamesTab> createState() => _GamesTabState();
@@ -514,6 +530,19 @@ class _GamesTabState extends State<_GamesTab>
           onPlay: widget.onPlayMinesweeper,
           playLabel: 'Chơi',
           isHot: false,
+        ),
+      ],
+      if (cat == 0 || cat == 1) ...[
+        _GameCard(
+          assetPath: 'assets/logo_game/Block Puzzle.png',
+          name: blockPuzzleMetadata.name,
+          description: blockPuzzleMetadata.description,
+          tag: 'Logic',
+          tagColor: const Color(0xFF0D9488),
+          gradient: AppGradients.emeraldTeal,
+          onPlay: widget.onPlayBlockPuzzle,
+          playLabel: 'Chơi',
+          isHot: true,
         ),
       ],
       if (cat == 0 || cat == 2) ...[

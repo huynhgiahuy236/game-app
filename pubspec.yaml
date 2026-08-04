@@ -79,6 +79,7 @@ flutter:
     - assets/logo_game/ox.jpg
     - assets/logo_game/do-min.png
     - assets/logo_game/co ty phu.jpg
+    - assets/logo_game/Block Puzzle.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

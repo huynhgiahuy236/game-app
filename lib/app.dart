@@ -8,6 +8,7 @@ import 'features/sudoku/views/hub_screen.dart';
 import 'features/caro/services/caro_repository.dart';
 import 'features/minesweeper/services/minesweeper_repository.dart';
 import 'features/monopoly/services/monopoly_repository.dart';
+import 'features/block_puzzle/services/block_puzzle_repository.dart';
 
 class GameApp extends StatefulWidget {
   const GameApp({super.key});
@@ -22,6 +23,7 @@ class _GameAppState extends State<GameApp> {
   final CaroRepository caroRepository = CaroRepository();
   final MinesweeperRepository minesweeperRepository = MinesweeperRepository();
   final MonopolyRepository monopolyRepository = MonopolyRepository();
+  final BlockPuzzleRepository blockPuzzleRepository = BlockPuzzleRepository();
   ThemeMode themeMode = ThemeMode.system;
 
   @override
@@ -38,6 +40,7 @@ class _GameAppState extends State<GameApp> {
         caroRepository: caroRepository,
         minesweeperRepository: minesweeperRepository,
         monopolyRepository: monopolyRepository,
+        blockPuzzleRepository: blockPuzzleRepository,
         onThemeChanged: (mode) => setState(() => themeMode = mode),
       ),
     );

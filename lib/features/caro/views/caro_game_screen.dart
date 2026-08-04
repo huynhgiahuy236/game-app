@@ -34,23 +34,45 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
 
   Future<void> _newGame() async {
     if (vm.history.isNotEmpty && vm.winner == CaroSymbol.none && !vm.isDraw) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Bắt đầu ván mới?'),
-          content: const Text('Tiến trình ván Cờ Caro hiện tại sẽ bị xóa.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Hủy'),
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF141B2D) : Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Bắt đầu ván mới?',
+                style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    fontWeight: FontWeight.w800),
+              ),
+              content: Text(
+                'Tiến trình ván Cờ Caro hiện tại sẽ bị xóa.',
+                style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B)),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text('Hủy',
+                      style: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B))),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0EA5E9)),
+                  child: const Text('Đồng ý'),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Ván mới'),
-            ),
-          ],
-        ),
-      ) ?? false;
+          ) ??
+          false;
       if (!confirmed) return;
     }
     vm.resetBoard();
@@ -60,28 +82,33 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => _CaroConfigSheet(vm: vm),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF080C18) : colors.surface,
       body: SafeArea(
         child: Column(
           children: [
-            // ── Header ───────────────────────────────────────────────
+            // ── Top Header ───────────────────────────────────────────
             _CaroHeader(
               onBack: () => Navigator.pop(context),
               onConfig: _showConfigSheet,
+              boardSizeLabel: vm.boardSize.label,
+              modeLabel: vm.mode == CaroMode.vsAi ? 'Đấu Máy 🤖' : '2 Người 👥',
             ),
 
-            // ── Mode & Turn Info Bar ─────────────────────────────────
+            // ── Mode & Turn HUD Bar ─────────────────────────────────
             _CaroTurnBar(vm: vm),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // ── Board Container ──────────────────────────────────────
             Expanded(
@@ -90,7 +117,11 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
                   final dim = vm.boardSize.dimension;
                   final maxW = constraints.maxWidth - 24;
                   final maxH = constraints.maxHeight - 24;
-                  final boardSizePx = (maxW < maxH ? maxW : maxH).clamp(240.0, 560.0);
+                  final boardSizePx =
+                      (maxW < maxH ? maxW : maxH).clamp(240.0, 560.0);
+
+                  final borderColor =
+                      isDark ? const Color(0xFF334155) : colors.outlineVariant;
 
                   return Center(
                     child: SizedBox(
@@ -99,17 +130,22 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: colors.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(20),
+                          color: isDark
+                              ? const Color(0xFF0B0F19)
+                              : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(22),
                           border: Border.all(
-                            color: colors.outlineVariant,
-                            width: 2,
+                            color: borderColor,
+                            width: 2.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: colors.shadow.withValues(alpha: 0.25),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
+                              color: isDark
+                                  ? const Color(0xFF0EA5E9)
+                                      .withValues(alpha: 0.15)
+                                  : Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 20,
+                              spreadRadius: -2,
                             ),
                           ],
                         ),
@@ -121,16 +157,21 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: dim,
-                              mainAxisSpacing: dim > 8 ? 2 : 6,
-                              crossAxisSpacing: dim > 8 ? 2 : 6,
+                              mainAxisSpacing: dim > 8 ? 2 : 5,
+                              crossAxisSpacing: dim > 8 ? 2 : 5,
                             ),
                             itemBuilder: (context, index) {
                               final isWinning =
                                   vm.winningLine?.contains(index) ?? false;
+                              final row = index ~/ dim;
+                              final col = index % dim;
+                              final isEven = (row + col) % 2 == 0;
+
                               return _CaroTile(
                                 symbol: vm.board[index],
                                 isWinning: isWinning,
                                 dimension: dim,
+                                isEven: isEven,
                                 onTap: () => vm.playMove(index),
                               );
                             },
@@ -143,11 +184,11 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
-            // ── Control Bar ──────────────────────────────────────────
+            // ── Control Action Buttons ───────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
                   Expanded(
@@ -157,26 +198,60 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
                           : vm.undo,
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 48),
+                        side: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF475569)
+                              : colors.outlineVariant,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      icon: const Icon(Icons.undo_rounded),
-                      label: const Text('Hoàn tác'),
+                      icon: Icon(Icons.undo_rounded,
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : colors.onSurfaceVariant),
+                      label: Text('Hoàn tác',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? const Color(0xFFE2E8F0)
+                                  : colors.onSurface)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _newGame,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0EA5E9)
+                                .withValues(alpha: 0.35),
+                            blurRadius: 10,
+                          ),
+                        ],
                       ),
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Ván mới'),
+                      child: ElevatedButton.icon(
+                        onPressed: _newGame,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          minimumSize: const Size(0, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(Icons.refresh_rounded,
+                            color: Colors.white),
+                        label: const Text('Ván mới',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white)),
+                      ),
                     ),
                   ),
                 ],
@@ -189,53 +264,150 @@ class _CaroGameScreenState extends State<CaroGameScreen> {
   }
 }
 
-// ── Header ───────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+//  HEADER (Overflow-proof)
+// ───────────────────────────────────────────────────────────────────────────
+
 class _CaroHeader extends StatelessWidget {
-  const _CaroHeader({required this.onBack, required this.onConfig});
+  const _CaroHeader({
+    required this.onBack,
+    required this.onConfig,
+    required this.boardSizeLabel,
+    required this.modeLabel,
+  });
+
   final VoidCallback onBack;
   final VoidCallback onConfig;
+  final String boardSizeLabel;
+  final String modeLabel;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: SizedBox(
-        height: 56,
+        height: 48,
         child: Row(
           children: [
-            IconButton(
-              tooltip: 'Quay lại',
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Cờ Caro / OX',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+            InkWell(
+              onTap: onBack,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : colors.outlineVariant,
                   ),
-                  Text(
-                    'Tận hưởng chiến thuật đỉnh cao',
-                    style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: isDark ? Colors.white : colors.onSurface,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0EA5E9), Color(0xFFF43F5E)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text('❌', style: TextStyle(fontSize: 14)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Cờ Caro / OX',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : colors.onSurface,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Text(
+                          '$modeLabel · $boardSizeLabel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : colors.onSurfaceVariant,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            IconButton(
-              tooltip: 'Cấu hình bàn cờ',
-              onPressed: onConfig,
-              icon: const Icon(Icons.tune_rounded),
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: onConfig,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : colors.primaryContainer.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.tune_rounded,
+                        size: 15,
+                        color: isDark
+                            ? const Color(0xFF38BDF8)
+                            : colors.onPrimaryContainer),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Cài đặt',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isDark
+                            ? const Color(0xFFF8FAFC)
+                            : colors.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -244,13 +416,17 @@ class _CaroHeader extends StatelessWidget {
   }
 }
 
-// ── Turn & Mode Bar ──────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+//  TURN & STATUS HUD BAR
+// ───────────────────────────────────────────────────────────────────────────
+
 class _CaroTurnBar extends StatelessWidget {
   const _CaroTurnBar({required this.vm});
   final CaroViewModel vm;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
     final isXTurn = vm.turn == CaroSymbol.x;
 
@@ -258,23 +434,38 @@ class _CaroTurnBar extends StatelessWidget {
     if (vm.winner == CaroSymbol.x) {
       statusText = '🎉 Quân X Chiến Thắng!';
     } else if (vm.winner == CaroSymbol.o) {
-      statusText = vm.mode == CaroMode.vsAi ? '🤖 Máy Thắng!' : '🎉 Quân O Chiến Thắng!';
+      statusText =
+          vm.mode == CaroMode.vsAi ? '🤖 Máy Thắng!' : '🎉 Quân O Chiến Thắng!';
     } else if (vm.isDraw) {
       statusText = '🤝 Ván Cờ Hòa!';
     } else if (vm.isAiThinking) {
       statusText = '🤖 Máy đang suy nghĩ...';
     } else {
-      statusText = 'Lượt đi: ${isXTurn ? "Quân X" : (vm.mode == CaroMode.vsAi ? "Máy (O)" : "Quân O")}';
+      statusText =
+          'Lượt đi: ${isXTurn ? "Quân X" : (vm.mode == CaroMode.vsAi ? "Máy (O)" : "Quân O")}';
     }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+          color: isDark ? const Color(0xFF1E293B) : colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : colors.outlineVariant,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -282,31 +473,66 @@ class _CaroTurnBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: colors.primaryContainer,
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : colors.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.3)),
               ),
               child: Text(
                 vm.boardSize.label,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: colors.onPrimaryContainer,
+                  color: isDark
+                      ? const Color(0xFF38BDF8)
+                      : colors.onSurfaceVariant,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 statusText,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: vm.winner != CaroSymbol.none
-                      ? const Color(0xFFEAB308)
-                      : colors.onSurface,
+                      ? const Color(0xFFF59E0B)
+                      : (isDark ? Colors.white : colors.onSurface),
                 ),
               ),
             ),
+            if (vm.winner == CaroSymbol.none && !vm.isDraw)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isXTurn
+                      ? const Color(0xFF0EA5E9).withValues(alpha: 0.2)
+                      : const Color(0xFFF43F5E).withValues(alpha: 0.2),
+                  border: Border.all(
+                    color: isXTurn
+                        ? const Color(0xFF0EA5E9)
+                        : const Color(0xFFF43F5E),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    isXTurn ? 'X' : 'O',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: isXTurn
+                          ? const Color(0xFF0EA5E9)
+                          : const Color(0xFFF43F5E),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -314,28 +540,55 @@ class _CaroTurnBar extends StatelessWidget {
   }
 }
 
-// ── Ô Cờ Caro Single Tile ────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+//  CARO SINGLE TILE (Eye-Friendly Tactile Tile)
+// ───────────────────────────────────────────────────────────────────────────
+
 class _CaroTile extends StatelessWidget {
   const _CaroTile({
     required this.symbol,
     required this.isWinning,
     required this.dimension,
+    required this.isEven,
     required this.onTap,
   });
+
   final CaroSymbol symbol;
   final bool isWinning;
   final int dimension;
+  final bool isEven;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    Color bg = colors.surfaceContainerLow;
-    Color borderCol = colors.outlineVariant.withValues(alpha: 0.4);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Color bg;
+    Border border;
+    List<BoxShadow>? shadows;
 
     if (isWinning) {
-      bg = const Color(0xFFFEF08A); // Gold win highlight
-      borderCol = const Color(0xFFEAB308);
+      bg = isDark ? const Color(0xFF854D0E) : const Color(0xFFFEF08A);
+      border = Border.all(color: const Color(0xFFEAB308), width: 2.0);
+      shadows = [
+        const BoxShadow(color: Color(0xFFEAB308), blurRadius: 8),
+      ];
+    } else if (symbol != CaroSymbol.none) {
+      // Played Tile
+      bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+      border = Border.all(
+        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+        width: 1.0,
+      );
+    } else {
+      // Unplayed Tile: Eye-friendly Muted Checkerboard Inset
+      if (isDark) {
+        bg = isEven ? const Color(0xFF0F172A) : const Color(0xFF090E17);
+        border = Border.all(color: const Color(0xFF1E293B), width: 0.5);
+      } else {
+        bg = isEven ? const Color(0xFFF0F4F8) : const Color(0xFFE4E9F0);
+        border = Border.all(color: const Color(0xFFD9E2EC), width: 0.5);
+      }
     }
 
     return Material(
@@ -353,10 +606,8 @@ class _CaroTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(dimension > 8 ? 4 : 8),
-            border: Border.all(
-              color: borderCol,
-              width: isWinning ? 2.0 : 1.0,
-            ),
+            border: border,
+            boxShadow: shadows,
           ),
           child: Center(
             child: _buildSymbolWidget(symbol, dimension, isWinning),
@@ -369,7 +620,7 @@ class _CaroTile extends StatelessWidget {
   Widget _buildSymbolWidget(CaroSymbol sym, int dim, bool isWinning) {
     if (sym == CaroSymbol.none) return const SizedBox.shrink();
 
-    final fontSize = dim == 3 ? 38.0 : (dim == 8 ? 20.0 : 12.0);
+    final fontSize = dim == 3 ? 38.0 : (dim == 8 ? 20.0 : 11.0);
 
     if (sym == CaroSymbol.x) {
       return Text(
@@ -377,13 +628,9 @@ class _CaroTile extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.w900,
-          color: isWinning ? const Color(0xFF0284C7) : const Color(0xFF0EA5E9), // Cyan X
-          shadows: [
-            BoxShadow(
-              color: const Color(0xFF0EA5E9).withValues(alpha: 0.5),
-              blurRadius: 6,
-            ),
-          ],
+          color: isWinning
+              ? const Color(0xFF0284C7)
+              : const Color(0xFF0EA5E9), // Cyan Blue X
         ),
       );
     } else {
@@ -392,20 +639,19 @@ class _CaroTile extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.w900,
-          color: isWinning ? const Color(0xFFE11D48) : const Color(0xFFF43F5E), // Rose O
-          shadows: [
-            BoxShadow(
-              color: const Color(0xFFF43F5E).withValues(alpha: 0.5),
-              blurRadius: 6,
-            ),
-          ],
+          color: isWinning
+              ? const Color(0xFFE11D48)
+              : const Color(0xFFF43F5E), // Coral Rose O
         ),
       );
     }
   }
 }
 
-// ── Cấu hình Chế độ & Kích thước bàn cờ — M3 Redesign ──────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+//  CONFIG SHEET
+// ───────────────────────────────────────────────────────────────────────────
+
 class _CaroConfigSheet extends StatefulWidget {
   const _CaroConfigSheet({required this.vm});
   final CaroViewModel vm;
@@ -438,16 +684,17 @@ class _CaroConfigSheetState extends State<_CaroConfigSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        color: isDark ? const Color(0xFF141B2D) : colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       padding: EdgeInsets.fromLTRB(
         20,
-        12,
+        14,
         20,
         MediaQuery.of(context).padding.bottom + 20,
       ),
@@ -455,143 +702,115 @@ class _CaroConfigSheetState extends State<_CaroConfigSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle indicator
           Center(
             child: Container(
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: colors.outlineVariant,
+                color: isDark ? const Color(0xFF475569) : colors.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-
-          // Title & Close Button
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.tune_rounded, color: colors.onPrimaryContainer, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tùy chỉnh Cờ Caro',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    Text(
-                      'Chọn kích thước bàn cờ & chế độ chơi',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
+          Text(
+            'Cấu hình Cờ Caro ⚙️',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : colors.onSurface,
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // 1. Kích thước Bàn Cờ
-          const _ConfigSectionTitle(
-            icon: Icons.grid_view_rounded,
-            title: 'Kích thước Bàn cờ',
+          // Size Selection
+          Text(
+            'Kích thước bàn cờ:',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: isDark ? const Color(0xFF94A3B8) : colors.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
-            children: CaroBoardSize.values.map((size) {
-              final active = selectedSize == size;
-              final subtitle = size == CaroBoardSize.classic3x3
-                  ? 'Nối 3 ô'
-                  : (size == CaroBoardSize.medium8x8 ? 'Nối 4 ô' : 'Nối 5 ô');
+            children: CaroBoardSize.values.map((s) {
+              final isSel = selectedSize == s;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _SelectableCard(
-                    title: '${size.dimension}×${size.dimension}',
-                    subtitle: subtitle,
-                    active: active,
-                    onTap: () => setState(() => selectedSize = size),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: _buildSelectableChip(
+                    label: s.label,
+                    isSelected: isSel,
+                    onTap: () => setState(() => selectedSize = s),
+                    isDark: isDark,
+                    colors: colors,
                   ),
                 ),
               );
             }).toList(),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
 
-          // 2. Chế độ Đối thủ
-          const _ConfigSectionTitle(
-            icon: Icons.sports_esports_rounded,
-            title: 'Chế độ Chơi',
+          // Mode Selection
+          Text(
+            'Chế độ chơi:',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: isDark ? const Color(0xFF94A3B8) : colors.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: _SelectableCard(
-                  icon: Icons.smart_toy_rounded,
-                  title: 'Đấu với Máy',
-                  subtitle: 'Chơi 1 mình',
-                  active: selectedMode == CaroMode.vsAi,
+                child: _buildSelectableChip(
+                  label: 'Đấu với Máy 🤖',
+                  isSelected: selectedMode == CaroMode.vsAi,
                   onTap: () => setState(() => selectedMode = CaroMode.vsAi),
+                  isDark: isDark,
+                  colors: colors,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _SelectableCard(
-                  icon: Icons.people_alt_rounded,
-                  title: '2 Người chơi',
-                  subtitle: 'Đấu trên 1 máy',
-                  active: selectedMode == CaroMode.pvp,
+                child: _buildSelectableChip(
+                  label: '2 Người chơi 👥',
+                  isSelected: selectedMode == CaroMode.pvp,
                   onTap: () => setState(() => selectedMode = CaroMode.pvp),
+                  isDark: isDark,
+                  colors: colors,
                 ),
               ),
             ],
           ),
 
-          // 3. Độ khó Máy (nếu chọn Vs AI)
           if (selectedMode == CaroMode.vsAi) ...[
-            const SizedBox(height: 20),
-            const _ConfigSectionTitle(
-              icon: Icons.psychology_rounded,
-              title: 'Độ khó Máy',
+            const SizedBox(height: 14),
+            Text(
+              'Độ khó của Máy:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color:
+                    isDark ? const Color(0xFF94A3B8) : colors.onSurfaceVariant,
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Row(
-              children: CaroDifficulty.values.map((diff) {
-                final active = selectedDiff == diff;
-                final icon = diff == CaroDifficulty.easy
-                    ? Icons.sentiment_satisfied_alt_rounded
-                    : (diff == CaroDifficulty.medium
-                        ? Icons.bolt_rounded
-                        : Icons.local_fire_department_rounded);
+              children: CaroDifficulty.values.map((d) {
+                final isSel = selectedDiff == d;
                 return Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: _SelectableCard(
-                      icon: icon,
-                      title: diff.label,
-                      subtitle: '',
-                      active: active,
-                      onTap: () => setState(() => selectedDiff = diff),
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: _buildSelectableChip(
+                      label: d.label,
+                      isSelected: isSel,
+                      onTap: () => setState(() => selectedDiff = d),
+                      isDark: isDark,
+                      colors: colors,
                     ),
                   ),
                 );
@@ -599,24 +818,30 @@ class _CaroConfigSheetState extends State<_CaroConfigSheet> {
             ),
           ],
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // CTA Action
           SizedBox(
             width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _apply,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
                 ),
-                elevation: 2,
               ),
-              icon: const Icon(Icons.check_circle_rounded),
-              label: const Text(
-                'Áp dụng & Bắt đầu ván mới',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              child: ElevatedButton(
+                onPressed: _apply,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Áp dụng & Bắt đầu',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900, color: Colors.white)),
               ),
             ),
           ),
@@ -624,110 +849,56 @@ class _CaroConfigSheetState extends State<_CaroConfigSheet> {
       ),
     );
   }
-}
 
-class _ConfigSectionTitle extends StatelessWidget {
-  const _ConfigSectionTitle({required this.icon, required this.title});
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: colors.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: colors.onSurface,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SelectableCard extends StatelessWidget {
-  const _SelectableCard({
-    this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.active,
-    required this.onTap,
-  });
-  final IconData? icon;
-  final String title;
-  final String subtitle;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    final bg = active ? colors.primaryContainer : colors.surfaceContainerHigh;
-    final fg = active ? colors.onPrimaryContainer : colors.onSurface;
-    final border = active
-        ? Border.all(color: colors.primary, width: 2.0)
-        : Border.all(color: colors.outlineVariant.withValues(alpha: 0.5));
-
+  Widget _buildSelectableChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    required ColorScheme colors,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-            border: border,
+            color: isSelected
+                ? const Color(0xFF0EA5E9)
+                : (isDark
+                    ? const Color(0xFF1E293B)
+                    : colors.surfaceContainerHigh),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF38BDF8)
+                  : (isDark ? const Color(0xFF334155) : colors.outlineVariant),
+              width: isSelected ? 1.5 : 1.0,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0EA5E9).withValues(alpha: 0.35),
+                      blurRadius: 8,
+                    ),
+                  ]
+                : null,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 22,
-                  color: active ? colors.primary : colors.onSurfaceVariant,
-                ),
-                const SizedBox(height: 6),
-              ],
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: active ? FontWeight.w900 : FontWeight.w700,
-                  color: fg,
-                ),
+          child: Center(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? const Color(0xFFE2E8F0) : colors.onSurface),
               ),
-              if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: active
-                        ? colors.onPrimaryContainer.withValues(alpha: 0.8)
-                        : colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),

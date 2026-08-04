@@ -260,7 +260,9 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
 
   @override
   Widget build(BuildContext context) {
-    final game = controller.game;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -269,6 +271,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         }
       },
       child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF080C18) : colors.surface,
         body: SafeArea(
           child: Focus(
             autofocus: true,
@@ -323,7 +326,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                   ],
                 ),
                 _SudokuToastBanner(message: _toastMessage),
-                if (game.status == GameStatus.paused)
+                if (controller.game.status == GameStatus.paused)
                   SudokuPauseOverlay(
                     onResume: controller.resume,
                     onExit: () async {
@@ -331,20 +334,21 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                       if (context.mounted) Navigator.pop(context);
                     },
                   ),
-                if (game.status == GameStatus.failed)
+                if (controller.game.status == GameStatus.failed)
                   SudokuResultOverlay(
                     title: 'Tạm dừng một nhịp',
-                    message: 'Bạn đã chạm giới hạn ${game.mistakeLimit} lỗi.',
+                    message:
+                        'Bạn đã chạm giới hạn ${controller.game.mistakeLimit} lỗi.',
                     icon: Icons.refresh_rounded,
                     primary: 'Thử lại',
                     onPrimary: controller.retry,
                     onExit: () => Navigator.pop(context),
                   ),
-                if (game.status == GameStatus.completed)
+                if (controller.game.status == GameStatus.completed)
                   SudokuResultOverlay(
                     title: 'Tuyệt vời!',
                     message:
-                        'Hoàn thành ${game.difficulty.label} trong ${formatTime(game.elapsedSeconds)} • ${game.mistakes} lỗi • ${game.hintsUsed} gợi ý.',
+                        'Hoàn thành ${controller.game.difficulty.label} trong ${formatTime(controller.game.elapsedSeconds)} • ${controller.game.mistakes} lỗi • ${controller.game.hintsUsed} gợi ý.',
                     icon: Icons.auto_awesome_rounded,
                     primary: 'Chơi lại',
                     onPrimary: controller.retry,
@@ -384,58 +388,128 @@ class SudokuTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final game = controller.game;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: SizedBox(
-        height: 56,
+        height: 48,
         child: Row(
           children: [
-            IconButton(
-              tooltip: 'Quay lại',
-              onPressed: onBack,
-              icon: Icon(Icons.arrow_back_rounded, color: colors.onSurface),
+            InkWell(
+              onTap: onBack,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : colors.outlineVariant,
+                  ),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: isDark ? Colors.white : colors.onSurface,
+                ),
+              ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
                 children: [
-                  Text(
-                    'SUDOKU',
-                    style: TextStyle(
-                      letterSpacing: 1.4,
-                      color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text('🔢', style: TextStyle(fontSize: 15)),
                     ),
                   ),
-                  Text(
-                    game.difficulty.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: colors.onSurface,
-                      fontSize: 16,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Sudoku ${game.difficulty.label}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : colors.onSurface,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Text(
+                          'Thử thách trí tuệ',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : colors.onSurfaceVariant,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 4),
             _TimerChip(seconds: game.elapsedSeconds),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _MistakeChip(
               mistakes: game.mistakes,
               limit: game.mistakeLimit,
               isErrorActive: (controller.feedbackCell != null &&
                   game.values[controller.feedbackCell!] != 0 &&
-                  game.values[controller.feedbackCell!] != game.solution[controller.feedbackCell!]),
+                  game.values[controller.feedbackCell!] !=
+                      game.solution[controller.feedbackCell!]),
             ),
             const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Tạm dừng',
-              onPressed: onPause,
-              icon: Icon(Icons.pause_rounded, color: colors.onSurface),
+            InkWell(
+              onTap: onPause,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : colors.outlineVariant,
+                  ),
+                ),
+                child: Icon(
+                  Icons.pause_rounded,
+                  size: 18,
+                  color: isDark ? Colors.white : colors.onSurface,
+                ),
+              ),
             ),
           ],
         ),
@@ -453,22 +527,25 @@ class _TimerChip extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF141B2D) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             'Thời gian',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.w700,
               color: colors.onSurfaceVariant,
-              letterSpacing: 0.6,
+              letterSpacing: 0.4,
+              height: 1.0,
             ),
           ),
           const SizedBox(height: 2),
@@ -476,7 +553,8 @@ class _TimerChip extends StatelessWidget {
             formatTime(seconds),
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              fontSize: 14,
+              fontSize: 13,
+              height: 1.1,
               fontFeatures: const [FontFeature.tabularFigures()],
               color: colors.onSurface,
             ),
@@ -505,31 +583,34 @@ class _MistakeChip extends StatelessWidget {
     final bg = isErrorActive
         ? (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEE2E2))
         : (isDark ? const Color(0xFF141B2D) : Colors.white);
-    final fg = isErrorActive
-        ? const Color(0xFFDC2626)
-        : colors.onSurface;
+    final fg = isErrorActive ? const Color(0xFFDC2626) : colors.onSurface;
     final border = isErrorActive
         ? Border.all(color: const Color(0xFFEF4444), width: 1.5)
-        : Border.all(color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7));
+        : Border.all(
+            color: isDark ? const Color(0xFF2A344D) : const Color(0xFFD8DCE7));
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: border,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             'Lỗi',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.w700,
-              color: isErrorActive ? const Color(0xFFDC2626) : colors.onSurfaceVariant,
-              letterSpacing: 0.6,
+              color: isErrorActive
+                  ? const Color(0xFFDC2626)
+                  : colors.onSurfaceVariant,
+              letterSpacing: 0.4,
+              height: 1.0,
             ),
           ),
           const SizedBox(height: 2),
@@ -537,7 +618,8 @@ class _MistakeChip extends StatelessWidget {
             '$mistakes/$limit',
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              fontSize: 14,
+              fontSize: 13,
+              height: 1.1,
               fontFeatures: const [FontFeature.tabularFigures()],
               color: fg,
             ),

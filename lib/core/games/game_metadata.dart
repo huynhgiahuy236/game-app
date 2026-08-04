@@ -52,3 +52,11 @@ const monopolyMetadata = GameMetadata(
   category: 'Chiến thuật',
   offline: true,
 );
+
+const blockPuzzleMetadata = GameMetadata(
+  id: 'block_puzzle',
+  name: 'Block Puzzle',
+  description: 'Xếp mảnh ghép vào lưới · Xóa hàng và cột để ghi điểm!',
+  category: 'Logic',
+  offline: true,
+);
