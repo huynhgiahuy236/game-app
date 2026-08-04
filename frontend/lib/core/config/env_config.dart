@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class EnvConfig {
   static String get apiBaseUrl {
     // Uses 127.0.0.1:4000 which works for:

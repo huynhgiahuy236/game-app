@@ -364,7 +364,7 @@ class _BlockPuzzleScreenState extends State<BlockPuzzleScreen>
                       child: IgnorePointer(
                         child: AnimatedBuilder(
                           animation: _scorePopCtrl,
-                          builder: (_, __) => Opacity(
+                          builder: (context, anim) => Opacity(
                             opacity: _scorePopFade.value,
                             child: Transform.translate(
                               offset: Offset(0, -50 * _scorePopCtrl.value),
@@ -749,8 +749,6 @@ class _BoardPainter extends CustomPainter {
   final Set<(int, int)> newlyPlaced;
   final bool isDark;
 
-  final _emptyPaint = const _Lazy<Paint>(null);
-
   @override
   void paint(Canvas canvas, Size size) {
     final stride = cellSize + gap;
@@ -875,11 +873,6 @@ class _BoardPainter extends CustomPainter {
   bool shouldRepaint(_BoardPainter old) => true;
 }
 
-// Helper to avoid null check warning
-class _Lazy<T> {
-  const _Lazy(this.value);
-  final T? value;
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  PIECE TRAY

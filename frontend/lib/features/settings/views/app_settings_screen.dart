@@ -52,7 +52,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 ),
                 child: SwitchListTile(
                   value: isDark,
-                  activeColor: const Color(0xFF38BDF8),
+                  activeThumbColor: const Color(0xFF38BDF8),
+                  activeTrackColor: const Color(0xFF38BDF8).withValues(alpha: 0.4),
                   title: const Text('Chế độ tối', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
                   secondary: const Icon(Icons.dark_mode_rounded, color: Color(0xFFFDE047), size: 28),
                   onChanged: (val) {
@@ -131,7 +132,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     children: [
                       SwitchListTile(
                         value: _enableOcrAutoFill,
-                        activeColor: const Color(0xFF38BDF8),
+                        activeThumbColor: const Color(0xFF38BDF8),
+                        activeTrackColor: const Color(0xFF38BDF8).withValues(alpha: 0.4),
                         title: const Text('Đọc chữ từ ảnh tự động', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                         secondary: const Icon(Icons.document_scanner_rounded, color: Color(0xFF38BDF8), size: 28),
                         onChanged: (val) => setState(() => _enableOcrAutoFill = val),
@@ -158,7 +160,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     children: [
                       SwitchListTile(
                         value: _enableSoundEffects,
-                        activeColor: const Color(0xFF2DD4BF),
+                        activeThumbColor: const Color(0xFF2DD4BF),
+                        activeTrackColor: const Color(0xFF2DD4BF).withValues(alpha: 0.4),
                         title: const Text('Âm thanh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                         secondary: const Icon(Icons.volume_up_rounded, color: Color(0xFF2DD4BF), size: 28),
                         onChanged: (val) => setState(() => _enableSoundEffects = val),
@@ -166,7 +169,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       const Divider(color: Color(0xFF334155), height: 1),
                       SwitchListTile(
                         value: _enableVibration,
-                        activeColor: const Color(0xFF2DD4BF),
+                        activeThumbColor: const Color(0xFF2DD4BF),
+                        activeTrackColor: const Color(0xFF2DD4BF).withValues(alpha: 0.4),
                         title: const Text('Rung phản hồi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                         secondary: const Icon(Icons.vibration_rounded, color: Color(0xFF2DD4BF), size: 28),
                         onChanged: (val) => setState(() => _enableVibration = val),

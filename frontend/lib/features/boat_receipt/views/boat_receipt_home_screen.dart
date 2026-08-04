@@ -311,7 +311,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         },
                         icon: const Icon(Icons.add_a_photo_rounded, size: 30),
                         label: const Text(
-                          '＋ CHỤP PHIẾU MỚI',
+                          'CHỤP PHIẾU MỚI',
                           style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, letterSpacing: 1.1),
                         ),
                         style: ElevatedButton.styleFrom(
@@ -335,9 +335,9 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                           );
                           if (saved == true) _loadData();
                         },
-                        icon: const Icon(Icons.edit_document, size: 28),
+                        icon: const Icon(Icons.edit_note_rounded, size: 28),
                         label: const Text(
-                          '✍ NHẬP THỦ CÔNG',
+                          'NHẬP THỦ CÔNG',
                           style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                         ),
                         style: OutlinedButton.styleFrom(
@@ -390,7 +390,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _recentReceipts.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 14),
+                        separatorBuilder: (context, idx) => const SizedBox(height: 14),
                         itemBuilder: (context, index) {
                           final item = _recentReceipts[index];
                           return Container(
