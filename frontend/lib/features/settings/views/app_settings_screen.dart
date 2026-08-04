@@ -27,12 +27,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = widget.authRepository?.currentUser;
 
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final sectionHeaderColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('CÀI ĐẶT', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        title: Text('CÀI ĐẶT', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
+        backgroundColor: bgColor,
+        foregroundColor: textColor,
         elevation: 0,
       ),
       body: SafeArea(
@@ -42,19 +49,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Shared Section: Theme
-              _buildSectionHeader('GIAO DIỆN'),
+              _buildSectionHeader('GIAO DIỆN', sectionHeaderColor),
               const SizedBox(height: 10),
               Material(
-                color: const Color(0xFF1E293B),
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0xFF334155)),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: SwitchListTile(
                   value: isDark,
                   activeThumbColor: const Color(0xFF38BDF8),
                   activeTrackColor: const Color(0xFF38BDF8).withValues(alpha: 0.4),
-                  title: const Text('Chế độ tối', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
+                  title: Text('Chế độ tối', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: textColor)),
                   secondary: const Icon(Icons.dark_mode_rounded, color: Color(0xFFFDE047), size: 28),
                   onChanged: (val) {
                     widget.onThemeChanged(val ? ThemeMode.dark : ThemeMode.light);
@@ -65,20 +72,20 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
               // Contextual Settings
               if (widget.currentModule == 'main') ...[
-                _buildSectionHeader('TÀI KHOẢN'),
+                _buildSectionHeader('TÀI KHOẢN', sectionHeaderColor),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                    color: cardBgColor,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF334155)),
+                    border: Border.all(color: cardBorderColor),
                   ),
                   child: Column(
                     children: [
-                      _buildInfoRow('Tên người dùng', user?.displayName ?? 'Mẹ'),
-                      const Divider(color: Color(0xFF334155), height: 20),
-                      _buildInfoRow('Tên đăng nhập', user?.username ?? 'admin'),
+                      _buildInfoRow('Tên người dùng', user?.displayName ?? 'Mẹ', subtextColor, textColor),
+                      Divider(color: cardBorderColor, height: 20),
+                      _buildInfoRow('Tên đăng nhập', user?.username ?? 'admin', subtextColor, textColor),
                       if (widget.authRepository != null) ...[
                         const SizedBox(height: 18),
                         SizedBox(
@@ -89,9 +96,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  backgroundColor: const Color(0xFF1E293B),
-                                  title: const Text('Đăng xuất', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                                  content: const Text('Bạn có muốn đăng xuất không?', style: TextStyle(fontSize: 18, color: Color(0xFFCBD5E1))),
+                                  backgroundColor: cardBgColor,
+                                  title: Text('Đăng xuất', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
+                                  content: Text('Bạn có muốn đăng xuất không?', style: TextStyle(fontSize: 18, color: subtextColor)),
                                   actions: [
                                     TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy', style: TextStyle(fontSize: 18, color: Colors.grey))),
                                     ElevatedButton(
@@ -120,13 +127,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   ),
                 ),
               ] else if (widget.currentModule == 'boat_receipts') ...[
-                _buildSectionHeader('TÙY CHỈNH SỔ GHE'),
+                _buildSectionHeader('TÙY CHỈNH SỔ GHE', sectionHeaderColor),
                 const SizedBox(height: 10),
                 Material(
-                  color: const Color(0xFF1E293B),
+                  color: cardBgColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Color(0xFF334155)),
+                    side: BorderSide(color: cardBorderColor),
                   ),
                   child: Column(
                     children: [
@@ -134,27 +141,27 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                         value: _enableOcrAutoFill,
                         activeThumbColor: const Color(0xFF38BDF8),
                         activeTrackColor: const Color(0xFF38BDF8).withValues(alpha: 0.4),
-                        title: const Text('Đọc chữ từ ảnh tự động', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        title: Text('Đọc chữ từ ảnh tự động', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                         secondary: const Icon(Icons.document_scanner_rounded, color: Color(0xFF38BDF8), size: 28),
                         onChanged: (val) => setState(() => _enableOcrAutoFill = val),
                       ),
-                      const Divider(color: Color(0xFF334155), height: 1),
+                      Divider(color: cardBorderColor, height: 1),
                       ListTile(
                         leading: const Icon(Icons.cloud_done_rounded, color: Color(0xFF10B981), size: 28),
-                        title: const Text('Lưu trữ hình ảnh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        title: Text('Lưu trữ hình ảnh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                         trailing: const Text('Tự động', style: TextStyle(fontSize: 16, color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
                 ),
               ] else if (widget.currentModule == 'games') ...[
-                _buildSectionHeader('TÙY CHỈNH TRÒ CHƠI'),
+                _buildSectionHeader('TÙY CHỈNH TRÒ CHƠI', sectionHeaderColor),
                 const SizedBox(height: 10),
                 Material(
-                  color: const Color(0xFF1E293B),
+                  color: cardBgColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Color(0xFF334155)),
+                    side: BorderSide(color: cardBorderColor),
                   ),
                   child: Column(
                     children: [
@@ -162,16 +169,16 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                         value: _enableSoundEffects,
                         activeThumbColor: const Color(0xFF2DD4BF),
                         activeTrackColor: const Color(0xFF2DD4BF).withValues(alpha: 0.4),
-                        title: const Text('Âm thanh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        title: Text('Âm thanh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                         secondary: const Icon(Icons.volume_up_rounded, color: Color(0xFF2DD4BF), size: 28),
                         onChanged: (val) => setState(() => _enableSoundEffects = val),
                       ),
-                      const Divider(color: Color(0xFF334155), height: 1),
+                      Divider(color: cardBorderColor, height: 1),
                       SwitchListTile(
                         value: _enableVibration,
                         activeThumbColor: const Color(0xFF2DD4BF),
                         activeTrackColor: const Color(0xFF2DD4BF).withValues(alpha: 0.4),
-                        title: const Text('Rung phản hồi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        title: Text('Rung phản hồi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                         secondary: const Icon(Icons.vibration_rounded, color: Color(0xFF2DD4BF), size: 28),
                         onChanged: (val) => setState(() => _enableVibration = val),
                       ),
@@ -183,20 +190,20 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               const SizedBox(height: 24),
 
               // System Info
-              _buildSectionHeader('THÔNG TIN THIẾT BỊ'),
+              _buildSectionHeader('THÔNG TIN THIẾT BỊ', sectionHeaderColor),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: cardBorderColor),
                 ),
                 child: Column(
                   children: [
-                    _buildInfoRow('Ứng dụng', 'Chị Mười - Phiên bản 1.0'),
-                    const Divider(color: Color(0xFF334155), height: 20),
-                    _buildInfoRow('Máy chủ', 'Máy chủ nội bộ'),
+                    _buildInfoRow('Ứng dụng', 'Chị Mười - Phiên bản 1.0', subtextColor, textColor),
+                    Divider(color: cardBorderColor, height: 20),
+                    _buildInfoRow('Máy chủ', 'Máy chủ nội bộ', subtextColor, textColor),
                   ],
                 ),
               ),
@@ -207,24 +214,32 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, Color color) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF38BDF8),
+        color: color,
         letterSpacing: 0.8,
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, Color subtextColor, Color textColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 18, color: Color(0xFF94A3B8))),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(label, style: TextStyle(fontSize: 17, color: subtextColor)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: textColor),
+          ),
+        ),
       ],
     );
   }

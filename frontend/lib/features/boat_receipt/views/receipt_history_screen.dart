@@ -104,31 +104,31 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
         children: [
           // Filter & Search Header Card
           Container(
-            color: const Color(0xFF1E293B),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 // Search Input Field
                 TextField(
                   controller: _searchController,
-                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                  style: TextStyle(fontSize: 18, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                   decoration: InputDecoration(
                     hintText: 'Tìm theo số ghe (ví dụ: AG 0204)...',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: const Icon(Icons.search_rounded, size: 28, color: Color(0xFF38BDF8)),
+                    hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 28, color: Color(0xFF0284C7)),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: Colors.grey),
+                      icon: Icon(Icons.clear_rounded, color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                       onPressed: () {
                         _searchController.clear();
                         _fetchHistory();
                       },
                     ),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
                     ),
                   ),
                   onSubmitted: (_) => _fetchHistory(),
@@ -140,13 +140,13 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip('Tất cả', 'all'),
+                      _buildFilterChip('Tất cả', 'all', isDark),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Hôm nay', 'today'),
+                      _buildFilterChip('Hôm nay', 'today', isDark),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Tuần này', 'week'),
+                      _buildFilterChip('Tuần này', 'week', isDark),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Tháng này', 'month'),
+                      _buildFilterChip('Tháng này', 'month', isDark),
                     ],
                   ),
                 ),
@@ -166,15 +166,15 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                         ),
                       )
                     : _receipts.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.receipt_long_rounded, size: 64, color: Color(0xFF64748B)),
-                                SizedBox(height: 16),
+                                Icon(Icons.receipt_long_rounded, size: 64, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                                const SizedBox(height: 16),
                                 Text(
                                   'Chưa tìm thấy phiếu nhập nào',
-                                  style: TextStyle(fontSize: 22, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 22, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -289,7 +289,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildFilterChip(String label, String value, bool isDark) {
     final isSelected = _filterType == value;
     return ChoiceChip(
       label: Text(
@@ -297,12 +297,12 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
         style: TextStyle(
           fontSize: 17,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
+          color: isSelected ? Colors.white : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
         ),
       ),
       selected: isSelected,
       selectedColor: const Color(0xFF0284C7),
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       onSelected: (selected) {
         if (selected) {

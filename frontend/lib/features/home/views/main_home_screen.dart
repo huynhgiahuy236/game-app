@@ -290,18 +290,22 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
           return Container(
             decoration: BoxDecoration(
-              gradient: item.gradient,
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: item.accentColor.withValues(alpha: 0.25),
+                  color: isDark
+                      ? item.accentColor.withValues(alpha: 0.25)
+                      : Colors.black.withValues(alpha: 0.06),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
               ],
               border: Border.all(
-                color: isPinned ? item.accentColor : Colors.white.withValues(alpha: 0.15),
-                width: isPinned ? 2.5 : 1.0,
+                color: isPinned
+                    ? item.accentColor
+                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                width: isPinned ? 2.5 : 1.5,
               ),
             ),
             child: Material(
@@ -316,10 +320,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: item.accentColor.withValues(alpha: 0.2),
+                          color: item.accentColor.withValues(alpha: isDark ? 0.2 : 0.12),
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: Icon(item.icon, size: 40, color: item.accentColor),
+                        child: Icon(item.icon, size: 38, color: item.accentColor),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -330,24 +334,22 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      item.title,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                                  child: Text(
+                                    item.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 21,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     ),
                                   ),
                                 ),
                                 IconButton(
                                   icon: Icon(
                                     isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                                    color: isPinned ? item.accentColor : Colors.white54,
-                                    size: 26,
+                                    color: isPinned ? item.accentColor : (isDark ? Colors.white54 : const Color(0xFF94A3B8)),
+                                    size: 24,
                                   ),
                                   onPressed: () => _togglePin(item.id),
                                   padding: EdgeInsets.zero,
@@ -360,16 +362,20 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                               item.subtitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
-                                color: Color(0xFFCBD5E1),
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 20, color: item.accentColor),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),

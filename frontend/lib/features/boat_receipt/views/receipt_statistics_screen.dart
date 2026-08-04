@@ -84,12 +84,12 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFFFDE047),
+          indicatorColor: isDark ? const Color(0xFFFDE047) : const Color(0xFF0284C7),
           indicatorWeight: 4,
           labelStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           unselectedLabelStyle: const TextStyle(fontSize: 16),
-          labelColor: const Color(0xFFFDE047),
-          unselectedLabelColor: const Color(0xFF94A3B8),
+          labelColor: isDark ? const Color(0xFFFDE047) : const Color(0xFF0284C7),
+          unselectedLabelColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           tabs: const [
             Tab(text: 'Theo Ngày'),
             Tab(text: 'Theo Tháng'),
@@ -125,6 +125,8 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
     final totalAmount = _dailyData!['totalAmount'] ?? 0;
     final avgPricePerKg = _dailyData!['avgPricePerKg'] ?? 0;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -145,10 +147,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             ),
           ),
           const SizedBox(height: 24),
-          const Text('PHÂN BỔ THEO GHE TRONG NGÀY', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('PHÂN BỔ THEO GHE TRONG NGÀY', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
           const SizedBox(height: 12),
           if (byBoat.isEmpty)
-            const Text('Hôm nay chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
+            Text('Hôm nay chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)))
           else
             ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
         ],
@@ -158,6 +160,8 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
 
   Widget _buildMonthlyTab() {
     if (_monthlyData == null) return const SizedBox();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final trips = _monthlyData!['trips'] ?? 0;
     final totalKg = _monthlyData!['totalKg'] ?? 0;
     final totalTons = _monthlyData!['totalTons'] ?? 0.0;
@@ -193,7 +197,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: const Color(0xFFEAB308), width: 2),
               ),
@@ -205,11 +209,11 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Ngày nhập nhiều lúa nhất', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8))),
+                        Text('Ngày nhập nhiều lúa nhất', style: TextStyle(fontSize: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
                         const SizedBox(height: 2),
                         Text(
                           '${highestDay['date']} · ${AppFormatters.formatKgToTons(highestDay['totalKg'])} (${highestDay['trips']} chuyến)',
-                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                          style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFDE047) : const Color(0xFFB45309)),
                         ),
                       ],
                     ),
@@ -220,10 +224,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             const SizedBox(height: 24),
           ],
 
-          const Text('TỔNG THEO TỪNG GHE TRONG THÁNG', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('TỔNG THEO TỪNG GHE TRONG THÁNG', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
           const SizedBox(height: 12),
           if (byBoat.isEmpty)
-            const Text('Tháng này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
+            Text('Tháng này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)))
           else
             ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
         ],
@@ -416,13 +420,15 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
   }
 
   Widget _buildBoatStatTile(String label, int trips, int totalKg) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF334155)),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -435,22 +441,22 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
                   color: const Color(0xFF0284C7).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.directions_boat_filled_rounded, color: Color(0xFF38BDF8), size: 28),
+                child: const Icon(Icons.directions_boat_filled_rounded, color: Color(0xFF0284C7), size: 28),
               ),
               const SizedBox(width: 14),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(label, style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
                   const SizedBox(height: 2),
-                  Text('$trips chuyến nhập', style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8))),
+                  Text('$trips chuyến nhập', style: TextStyle(fontSize: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
                 ],
               ),
             ],
           ),
           Text(
             AppFormatters.formatKgToTons(totalKg),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
           ),
         ],
       ),

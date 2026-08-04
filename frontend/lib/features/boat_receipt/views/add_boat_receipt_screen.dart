@@ -131,19 +131,20 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
               ),
             )
           : SafeArea(
-              child: Padding(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'VUI LÒNG CHỌN PHƯƠNG THỨC',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -155,6 +156,7 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
                       subtitle: 'Dùng máy ảnh chụp phiếu & tự nhận diện chữ',
                       icon: Icons.camera_alt_rounded,
                       color: const Color(0xFF0284C7),
+                      isDark: isDark,
                       onTap: () => _pickImage(ImageSource.camera),
                     ),
                     const SizedBox(height: 20),
@@ -165,6 +167,7 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
                       subtitle: 'Lấy ảnh phiếu có sẵn trong điện thoại',
                       icon: Icons.photo_library_rounded,
                       color: const Color(0xFF0D9488),
+                      isDark: isDark,
                       onTap: () => _pickImage(ImageSource.gallery),
                     ),
                     const SizedBox(height: 20),
@@ -175,6 +178,7 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
                       subtitle: 'Tự gõ số ghe và số kg trực tiếp',
                       icon: Icons.edit_note_rounded,
                       color: const Color(0xFFD97706),
+                      isDark: isDark,
                       onTap: _manualEntry,
                     ),
                   ],
@@ -189,11 +193,12 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
     required String subtitle,
     required IconData icon,
     required Color color,
+    required bool isDark,
     required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
@@ -228,17 +233,17 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
+                        style: TextStyle(fontSize: 15, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF64748B), size: 22),
+                Icon(Icons.arrow_forward_ios_rounded, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), size: 22),
               ],
             ),
           ),

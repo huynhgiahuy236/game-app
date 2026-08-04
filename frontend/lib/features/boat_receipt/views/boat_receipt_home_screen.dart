@@ -67,6 +67,8 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final List<Widget> pages = [
       _buildHomeContent(),
       const ReceiptHistoryScreen(),
@@ -79,27 +81,31 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       body: IndexedStack(
         index: _currentNavIndex,
         children: pages,
       ),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
-          height: 72,
-          backgroundColor: const Color(0xFF1E293B),
+          height: 70,
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           indicatorColor: const Color(0xFF0284C7),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => TextStyle(
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.w500,
-              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+              color: states.contains(WidgetState.selected)
+                  ? (isDark ? Colors.white : const Color(0xFF0284C7))
+                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
             ),
           ),
           iconTheme: WidgetStateProperty.resolveWith(
             (states) => IconThemeData(
               size: 26,
-              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+              color: states.contains(WidgetState.selected)
+                  ? Colors.white
+                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
             ),
           ),
         ),
@@ -115,7 +121,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
             NavigationDestination(
               icon: Icon(Icons.directions_boat_filled_rounded),
               selectedIcon: Icon(Icons.directions_boat_filled_rounded, color: Colors.white),
-              label: 'Trang chủ Sổ',
+              label: 'Trang chủ',
             ),
             NavigationDestination(
               icon: Icon(Icons.history_rounded),
@@ -348,8 +354,8 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                           style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF38BDF8),
-                          side: const BorderSide(color: Color(0xFF0284C7), width: 2.5),
+                          foregroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                          side: BorderSide(color: isDark ? const Color(0xFF0284C7) : const Color(0xFF0284C7), width: 2.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                       ),
@@ -360,9 +366,9 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'PHIẾU GẦN ĐÂY',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A), letterSpacing: 0.5),
                         ),
                         TextButton(
                           onPressed: () {
@@ -370,7 +376,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                               _currentNavIndex = 1;
                             });
                           },
-                          child: const Text('Xem tất cả', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                          child: const Text('Xem tất cả', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
                         ),
                       ],
                     ),
@@ -380,15 +386,15 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(28),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
+                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF334155)),
+                          border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text(
                             'Chưa có phiếu nhập lúa nào.\nBấm "CHỤP PHIẾU MỚI" để bắt đầu.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8), height: 1.5),
+                            style: TextStyle(fontSize: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), height: 1.5),
                           ),
                         ),
                       )
@@ -401,10 +407,10 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         itemBuilder: (context, index) {
                           final item = _recentReceipts[index];
                           return Material(
-                            color: const Color(0xFF1E293B),
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
-                              side: const BorderSide(color: Color(0xFF334155)),
+                              side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                             ),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
