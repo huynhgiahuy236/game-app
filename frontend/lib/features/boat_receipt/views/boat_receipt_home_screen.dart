@@ -211,7 +211,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                       },
                       borderRadius: BorderRadius.circular(22),
                       child: Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF1E293B), Color(0xFF0369A1)],
@@ -229,43 +229,53 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                           border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3), width: 1.5),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    runSpacing: 2,
                                     children: [
                                       const Icon(Icons.today_rounded, size: 22, color: Color(0xFFFDE047)),
-                                      const SizedBox(width: 8),
                                       const Text(
                                         'HÔM NAY',
                                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
                                       ),
-                                      const SizedBox(width: 8),
                                       Text(
                                         '(${_summary?.today.trips ?? 0} chuyến)',
-                                        style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                                        style: const TextStyle(fontSize: 15, color: Colors.white70, fontWeight: FontWeight.w600),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    AppFormatters.formatKgToTons(_summary?.today.weightKg ?? 0),
-                                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                                  const SizedBox(height: 6),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      AppFormatters.formatKgToTons(_summary?.today.weightKg ?? 0),
+                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
                                   ),
                                   if ((_summary?.today.totalAmount ?? 0) > 0) ...[
                                     const SizedBox(height: 4),
-                                    Text(
-                                      AppFormatters.formatCurrency(_summary?.today.totalAmount ?? 0),
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        AppFormatters.formatCurrency(_summary?.today.totalAmount ?? 0),
+                                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                      ),
                                     ),
                                   ],
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('Thống kê', style: TextStyle(fontSize: 15, color: Color(0xFF38BDF8), fontWeight: FontWeight.bold)),
                                 SizedBox(width: 4),
@@ -288,7 +298,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                       },
                       borderRadius: BorderRadius.circular(22),
                       child: Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF065F46), Color(0xFF0D9488)],
@@ -306,43 +316,53 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                           border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.3), width: 1.5),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    runSpacing: 2,
                                     children: [
                                       const Icon(Icons.calendar_month_rounded, size: 22, color: Color(0xFFFDE047)),
-                                      const SizedBox(width: 8),
                                       Text(
                                         'THÁNG ${AppFormatters.formatMonthYear(now)}',
                                         style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
                                       ),
-                                      const SizedBox(width: 8),
                                       Text(
                                         '(${_summary?.month.trips ?? 0} chuyến)',
-                                        style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                                        style: const TextStyle(fontSize: 15, color: Colors.white70, fontWeight: FontWeight.w600),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    AppFormatters.formatKgToTons(_summary?.month.weightKg ?? 0),
-                                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                                  const SizedBox(height: 6),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      AppFormatters.formatKgToTons(_summary?.month.weightKg ?? 0),
+                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
                                   ),
                                   if ((_summary?.month.totalAmount ?? 0) > 0) ...[
                                     const SizedBox(height: 4),
-                                    Text(
-                                      AppFormatters.formatCurrency(_summary?.month.totalAmount ?? 0),
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        AppFormatters.formatCurrency(_summary?.month.totalAmount ?? 0),
+                                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                      ),
                                     ),
                                   ],
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('Thống kê', style: TextStyle(fontSize: 15, color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold)),
                                 SizedBox(width: 4),
