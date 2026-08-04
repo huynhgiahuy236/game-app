@@ -2,7 +2,7 @@ class EnvConfig {
   static String? _overrideUrl;
 
   static const String defaultLocalUrl = 'http://127.0.0.1:4000/api/v1';
-  static const String defaultRenderUrl = 'https://chi-muoi-backend.onrender.com/api/v1';
+  static const String defaultRenderUrl = 'https://game-app-8hx0.onrender.com/api/v1';
 
   static String get apiBaseUrl {
     if (_overrideUrl != null && _overrideUrl!.isNotEmpty) {
@@ -12,7 +12,7 @@ class EnvConfig {
     if (envUrl.isNotEmpty) {
       return envUrl;
     }
-    return defaultLocalUrl;
+    return defaultRenderUrl;
   }
 
   static void setOverrideUrl(String? url) {
