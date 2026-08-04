@@ -15,22 +15,17 @@ class ReceiptHistoryScreen extends StatefulWidget {
 
 class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
   final _repository = BoatReceiptRepository();
-  final _searchController = TextEditingController();
   List<BoatReceiptModel> _receipts = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _filterType = 'all';
+  DateTime? _selectedDate;
+  String? _selectedBoat;
 
   @override
   void initState() {
     super.initState();
     _fetchHistory();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<void> _fetchHistory() async {
@@ -44,7 +39,9 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
       String? month;
       String? from;
       String? to;
-      if (_filterType == 'today') {
+      if (_filterType == 'date' && _selectedDate != null) {
+        date = _iso(_selectedDate!);
+      } else if (_filterType == 'today') {
         date = _iso(now);
       } else if (_filterType == 'month') {
         month = '${now.year}-${now.month.toString().padLeft(2, '0')}';
@@ -52,14 +49,12 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
         from = _iso(now.subtract(Duration(days: now.weekday - 1)));
         to = _iso(now);
       }
-      final query = _searchController.text.trim();
-      final data = await _repository.getReceipts(
+      final data = await _repository.getAllReceipts(
         date: date,
         month: month,
         from: from,
         to: to,
-        boatNumber: query.isEmpty ? null : query,
-        limit: 100,
+        boatNumber: _selectedBoat,
       );
       if (mounted) setState(() => _receipts = data);
     } catch (error) {
@@ -121,30 +116,93 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
     child: Column(
       children: [
-        TextField(
-          controller: _searchController,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          decoration:
-              ReceiptUi.input(
-                context,
-                hint: 'Tìm DT-2764 hoặc AG-26911',
-                icon: Icons.search_rounded,
-              ).copyWith(
-                suffixIcon: IconButton(
-                  tooltip: 'Xóa tìm kiếm',
-                  onPressed: () {
-                    _searchController.clear();
-                    _fetchHistory();
-                  },
-                  icon: const Icon(Icons.close_rounded),
-                ),
+        Row(
+          children: [
+            Expanded(
+              child: _boatOption(
+                'Tất cả ghe',
+                null,
+                ReceiptColors.ink,
+                ReceiptUi.line(context),
               ),
-          onSubmitted: (_) => _fetchHistory(),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _boatOption(
+                'DT-2764',
+                'DT-2764',
+                ReceiptColors.blueStrong,
+                ReceiptColors.blueSoft,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _boatOption(
+                'AG-26911',
+                'AG-26911',
+                ReceiptColors.green,
+                ReceiptColors.greenSoft,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: OutlinedButton.icon(
+            onPressed: _pickDate,
+            icon: const Icon(Icons.calendar_today_outlined),
+            label: Text(
+              _selectedDate == null
+                  ? 'Chọn một ngày cụ thể'
+                  : AppFormatters.formatDate(_selectedDate!),
+            ),
+            style: OutlinedButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              foregroundColor: _filterType == 'date'
+                  ? ReceiptColors.blueStrong
+                  : ReceiptColors.ink,
+              backgroundColor: _filterType == 'date'
+                  ? ReceiptColors.blueSoft
+                  : ReceiptUi.surface(context),
+              side: BorderSide(
+                color: _filterType == 'date'
+                    ? ReceiptColors.blue
+                    : ReceiptUi.line(context),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+        if (_selectedDate != null && _filterType == 'date') ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _selectedDate = null;
+                  _filterType = 'all';
+                });
+                _fetchHistory();
+              },
+              icon: const Icon(Icons.close_rounded, size: 19),
+              label: const Text('Bỏ ngày đã chọn'),
+            ),
+          ),
+        ] else
+          const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _chip('Tất cả', 'all'),
               _chip('Hôm nay', 'today'),
@@ -157,120 +215,188 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     ),
   );
 
-  Widget _chip(String label, String value) => Padding(
-    padding: const EdgeInsets.only(right: 8),
-    child: ChoiceChip(
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-      ),
-      selected: _filterType == value,
-      selectedColor: ReceiptColors.blueSoft,
-      side: BorderSide(
+  Widget _chip(String label, String value) => ChoiceChip(
+    label: Text(
+      label,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
         color: _filterType == value
-            ? ReceiptColors.blue
-            : ReceiptUi.line(context),
+            ? ReceiptColors.blueStrong
+            : ReceiptUi.secondaryText(context),
       ),
-      onSelected: (_) {
-        setState(() => _filterType = value);
-        _fetchHistory();
-      },
     ),
+    selected: _filterType == value,
+    selectedColor: ReceiptColors.blueSoft,
+    backgroundColor: ReceiptUi.surface(context),
+    showCheckmark: false,
+    side: BorderSide(
+      color: _filterType == value
+          ? ReceiptColors.blue
+          : ReceiptUi.line(context),
+    ),
+    onSelected: (_) {
+      setState(() {
+        _filterType = value;
+        _selectedDate = null;
+      });
+      _fetchHistory();
+    },
   );
 
-  Widget _receiptCard(BoatReceiptModel receipt) => ReceiptSurface(
-    onTap: () async {
-      final changed = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
+  Widget _boatOption(
+    String label,
+    String? value,
+    Color accent,
+    Color background,
+  ) {
+    final selected = _selectedBoat == value;
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedBoat = value);
+        _fetchHistory();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? background : ReceiptUi.surface(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? accent : ReceiptUi.line(context),
+            width: selected ? 2 : 1,
+          ),
         ),
-      );
-      if (changed == true) _fetchHistory();
-    },
-    child: Column(
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: ReceiptColors.blueSoft,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.directions_boat_outlined,
-                color: ReceiptColors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    receipt.boatNumber,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    AppFormatters.formatDate(receipt.receiptDate),
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: ReceiptUi.secondaryText(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded),
-          ],
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            color: selected ? accent : ReceiptColors.ink,
+          ),
         ),
-        const SizedBox(height: 12),
-        Divider(color: ReceiptUi.line(context), height: 1),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _value(
-                'Khối lượng',
-                AppFormatters.formatKgToTons(receipt.weightKg),
-                ReceiptColors.blueStrong,
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'CHỌN NGÀY CÂN VÀO',
+      cancelText: 'Hủy',
+      confirmText: 'Chọn ngày',
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selectedDate = picked;
+      _filterType = 'date';
+    });
+    _fetchHistory();
+  }
+
+  Widget _receiptCard(BoatReceiptModel receipt) {
+    final isAg = receipt.boatNumber.toUpperCase().startsWith('AG');
+    final accent = isAg ? ReceiptColors.green : ReceiptColors.blue;
+    final soft = isAg ? const Color(0xFFDCFCE7) : ReceiptColors.blueSoft;
+    return ReceiptSurface(
+      borderColor: accent.withValues(alpha: 0.55),
+      surfaceColor: soft,
+      onTap: () async {
+        final changed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
+          ),
+        );
+        if (changed == true) _fetchHistory();
+      },
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: soft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.directions_boat_outlined, color: accent),
               ),
-            ),
-            if (receipt.computedTotalAmount > 0)
+              const SizedBox(width: 12),
               Expanded(
-                child: _value(
-                  'Thành tiền',
-                  AppFormatters.formatCurrency(receipt.computedTotalAmount),
-                  ReceiptColors.green,
-                  alignEnd: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      receipt.boatNumber,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      AppFormatters.formatDate(receipt.receiptDate),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: ReceiptUi.secondaryText(context),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ],
-        ),
-        if (receipt.note.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              receipt.note,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 15,
-                color: ReceiptUi.secondaryText(context),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: ReceiptUi.line(context), height: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _value(
+                  'Khối lượng',
+                  AppFormatters.formatKgToTons(receipt.weightKg),
+                  ReceiptColors.blueStrong,
+                ),
+              ),
+              if (receipt.computedTotalAmount > 0)
+                Expanded(
+                  child: _value(
+                    'Thành tiền',
+                    AppFormatters.formatCurrency(receipt.computedTotalAmount),
+                    ReceiptColors.green,
+                    alignEnd: true,
+                  ),
+                ),
+            ],
+          ),
+          if (receipt.note.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                receipt.note,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: ReceiptUi.secondaryText(context),
+                ),
               ),
             ),
-          ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 
   Widget _value(
     String label,

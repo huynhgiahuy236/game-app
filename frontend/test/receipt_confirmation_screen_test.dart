@@ -42,16 +42,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ngày cân vào'), findsOneWidget);
-    expect(find.text('11/07/2025'), findsOneWidget);
+    expect(find.text('Thứ Sáu, 11/07/2025'), findsOneWidget);
     expect(find.text('AG-26911'), findsOneWidget);
     expect(find.text('80956'), findsOneWidget);
     expect(find.text('80,956 tấn'), findsOneWidget);
     expect(find.text('Máy đã đọc được gì?'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.ensureVisible(find.text('11/07/2025'));
+    await tester.ensureVisible(find.text('Thứ Sáu, 11/07/2025'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('11/07/2025'));
+    await tester.tap(find.text('Thứ Sáu, 11/07/2025'));
     await tester.pumpAndSettle();
     expect(find.byType(DatePickerDialog), findsOneWidget);
     expect(tester.takeException(), isNull);

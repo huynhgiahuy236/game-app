@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../services/boat_receipt_repository.dart';
-import 'receipt_bar_chart.dart';
 import 'receipt_ui.dart';
 
 enum _Period { week, month, year }
 
+enum _StatsPage { overview, boats }
+
 class ReceiptStatisticsScreen extends StatefulWidget {
-  final int initialTabIndex;
   const ReceiptStatisticsScreen({super.key, this.initialTabIndex = 0});
+  final int initialTabIndex;
 
   @override
   State<ReceiptStatisticsScreen> createState() =>
@@ -19,10 +20,12 @@ class ReceiptStatisticsScreen extends StatefulWidget {
 class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
   final _repository = BoatReceiptRepository();
   late _Period _period;
+  _StatsPage _page = _StatsPage.overview;
   DateTime _anchor = DateTime.now();
   Map<String, dynamic>? _data;
-  bool _isLoading = true;
-  String? _errorMessage;
+  Map<String, dynamic>? _previousData;
+  String? _error;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -35,44 +38,60 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     _load();
   }
 
-  String get _dateParam =>
-      '${_anchor.year}-${_anchor.month.toString().padLeft(2, '0')}-${_anchor.day.toString().padLeft(2, '0')}';
-  String get _monthParam =>
-      '${_anchor.year}-${_anchor.month.toString().padLeft(2, '0')}';
-
   Future<void> _load() async {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _loading = true;
+      _error = null;
     });
     try {
-      final result = switch (_period) {
-        _Period.week => await _repository.getWeeklyStats(_dateParam),
-        _Period.month => await _repository.getMonthlyStats(_monthParam),
-        _Period.year => await _repository.getYearlyStats('${_anchor.year}'),
+      final previousAnchor = switch (_period) {
+        _Period.week => _anchor.subtract(const Duration(days: 7)),
+        _Period.month => DateTime(_anchor.year, _anchor.month - 1),
+        _Period.year => DateTime(_anchor.year - 1),
       };
-      if (mounted) setState(() => _data = result);
-    } catch (error) {
-      if (mounted) setState(() => _errorMessage = error.toString());
+      final values = await Future.wait([
+        _fetchStats(_anchor),
+        _fetchStats(previousAnchor),
+      ]);
+      if (mounted) {
+        setState(() {
+          _data = values[0];
+          _previousData = values[1];
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _selectPeriod(_Period period) {
+  Future<Map<String, dynamic>> _fetchStats(DateTime anchor) =>
+      switch (_period) {
+        _Period.week => _repository.getWeeklyStats(
+          '${anchor.year}-${_two(anchor.month)}-${_two(anchor.day)}',
+        ),
+        _Period.month => _repository.getMonthlyStats(
+          '${anchor.year}-${_two(anchor.month)}',
+        ),
+        _Period.year => _repository.getYearlyStats('${anchor.year}'),
+      };
+
+  void _changePeriod(_Period value) {
+    if (_period == value) return;
     setState(() {
-      _period = period;
+      _period = value;
       _anchor = DateTime.now();
     });
     _load();
   }
 
-  void _move(int direction) {
+  void _move(int step) {
     setState(() {
       _anchor = switch (_period) {
-        _Period.week => _anchor.add(Duration(days: 7 * direction)),
-        _Period.month => DateTime(_anchor.year, _anchor.month + direction, 1),
-        _Period.year => DateTime(_anchor.year + direction, 1, 1),
+        _Period.week => _anchor.add(Duration(days: step * 7)),
+        _Period.month => DateTime(_anchor.year, _anchor.month + step),
+        _Period.year => DateTime(_anchor.year + step),
       };
     });
     _load();
@@ -84,150 +103,198 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     appBar: ReceiptUi.appBar(
       context,
       'Thống kê',
-      subtitle: 'Theo dõi chuyến, khối lượng và tiền trấu',
+      subtitle: 'Xem tổng quan hoặc riêng từng ghe',
     ),
     body: Column(
       children: [
-        _periodSelector(),
-        _periodNavigator(),
+        _topControls(),
         Expanded(
-          child: _isLoading
+          child: _loading
               ? const Center(
                   child: CircularProgressIndicator(color: ReceiptColors.blue),
                 )
-              : _errorMessage != null
-              ? Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ReceiptErrorState(
-                    message: _errorMessage!,
-                    onRetry: _load,
-                  ),
-                )
-              : RefreshIndicator(onRefresh: _load, child: _dashboard()),
+              : _error != null
+              ? ReceiptErrorState(message: _error!, onRetry: _load)
+              : RefreshIndicator(onRefresh: _load, child: _content()),
         ),
       ],
     ),
   );
 
-  Widget _periodSelector() => Container(
+  Widget _topControls() => Container(
     color: ReceiptUi.surface(context),
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-    child: SegmentedButton<_Period>(
-      showSelectedIcon: false,
-      segments: const [
-        ButtonSegment(
-          value: _Period.week,
-          label: Text('Tuần'),
-          icon: Icon(Icons.view_week_outlined),
-        ),
-        ButtonSegment(
-          value: _Period.month,
-          label: Text('Tháng'),
-          icon: Icon(Icons.calendar_view_month_outlined),
-        ),
-        ButtonSegment(
-          value: _Period.year,
-          label: Text('Năm'),
-          icon: Icon(Icons.calendar_today_outlined),
-        ),
-      ],
-      selected: {_period},
-      onSelectionChanged: (selected) => _selectPeriod(selected.first),
-      style: ButtonStyle(
-        textStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        minimumSize: WidgetStateProperty.all(const Size(72, 52)),
-      ),
-    ),
-  );
-
-  Widget _periodNavigator() => Container(
-    color: ReceiptUi.surface(context),
-    padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-    child: Row(
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+    child: Column(
       children: [
-        IconButton(
-          onPressed: () => _move(-1),
-          tooltip: 'Kỳ trước',
-          icon: const Icon(Icons.chevron_left_rounded, size: 30),
-        ),
-        Expanded(
-          child: Text(
-            _periodLabel(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: ReceiptUi.canvas(context),
+            borderRadius: BorderRadius.circular(14),
           ),
-        ),
-        IconButton(
-          onPressed: () => _move(1),
-          tooltip: 'Kỳ sau',
-          icon: const Icon(Icons.chevron_right_rounded, size: 30),
-        ),
-      ],
-    ),
-  );
-
-  String _periodLabel() {
-    if (_period == _Period.month) {
-      return 'Tháng ${_anchor.month}/${_anchor.year}';
-    }
-    if (_period == _Period.year) return 'Năm ${_anchor.year}';
-    final monday = _anchor.subtract(Duration(days: _anchor.weekday - 1));
-    final sunday = monday.add(const Duration(days: 6));
-    return '${monday.day}/${monday.month} – ${sunday.day}/${sunday.month}/${sunday.year}';
-  }
-
-  Widget _dashboard() {
-    final data = _data ?? {};
-    final chart = _chartPoints(data);
-    final boats = List<Map<String, dynamic>>.from(
-      (data['byBoat'] as List? ?? []).map(
-        (item) => Map<String, dynamic>.from(item as Map),
-      ),
-    );
-    final totalKg = _int(data['totalKg']);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-      children: [
-        _summary(data),
-        const SizedBox(height: 14),
-        ReceiptSurface(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              const ReceiptSectionTitle('Biểu đồ khối lượng'),
-              const SizedBox(height: 4),
-              Text(
-                _period == _Period.year
-                    ? 'Đơn vị: tấn theo tháng'
-                    : 'Đơn vị: tấn theo ngày',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: ReceiptUi.secondaryText(context),
+              Expanded(
+                child: _pageButton(
+                  'Tổng quan',
+                  Icons.dashboard_outlined,
+                  _StatsPage.overview,
                 ),
               ),
-              const SizedBox(height: 12),
-              ReceiptBarChart(points: chart),
+              Expanded(
+                child: _pageButton(
+                  'Theo ghe',
+                  Icons.directions_boat_outlined,
+                  _StatsPage.boats,
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        const ReceiptSectionTitle('Chi tiết theo ghe'),
-        const SizedBox(height: 8),
-        if (boats.isEmpty)
-          const ReceiptEmptyState(
-            icon: Icons.directions_boat_outlined,
-            title: 'Chưa có chuyến ghe',
-            message: 'Kỳ này chưa có phiếu nhập nào.',
-          )
-        else
-          ...boats.map(
-            (boat) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _boatCard(boat, totalKg),
-            ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: ReceiptUi.canvas(context),
+            borderRadius: BorderRadius.circular(14),
           ),
+          child: Row(
+            children: [
+              Expanded(child: _periodButton('Tuần', _Period.week)),
+              Expanded(child: _periodButton('Tháng', _Period.month)),
+              Expanded(child: _periodButton('Năm', _Period.year)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _arrow(Icons.chevron_left_rounded, 'Kỳ trước', -1),
+            Expanded(
+              child: Text(
+                _periodLabel(),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+              ),
+            ),
+            _arrow(Icons.chevron_right_rounded, 'Kỳ sau', 1),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _pageButton(String label, IconData icon, _StatsPage value) {
+    final selected = _page == value;
+    return InkWell(
+      onTap: () => setState(() => _page = value),
+      borderRadius: BorderRadius.circular(11),
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: selected ? ReceiptColors.blueStrong : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 21,
+              color: selected ? Colors.white : ReceiptUi.secondaryText(context),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: selected ? Colors.white : ReceiptColors.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _periodButton(String label, _Period value) {
+    final selected = _period == value;
+    return InkWell(
+      onTap: () => _changePeriod(value),
+      borderRadius: BorderRadius.circular(11),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? ReceiptUi.surface(context) : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x160F172A),
+                    blurRadius: 5,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: selected
+                ? ReceiptColors.blueStrong
+                : ReceiptUi.secondaryText(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _arrow(IconData icon, String tooltip, int step) =>
+      IconButton.filledTonal(
+        onPressed: () => _move(step),
+        tooltip: tooltip,
+        icon: Icon(icon, size: 28),
+      );
+
+  Widget _content() {
+    final data = _data ?? const <String, dynamic>{};
+    final boats = _boats(data);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+      children: [
+        if (_page == _StatsPage.overview) ...[
+          _summary(data),
+          const SizedBox(height: 14),
+          _comparison(data, _previousData ?? const {}),
+          const SizedBox(height: 14),
+          _operatingMetrics(data),
+          const SizedBox(height: 14),
+          _highlights(data, boats),
+          const SizedBox(height: 14),
+          _breakdown(data),
+        ] else if (_page == _StatsPage.boats) ...[
+          _boatHeader(boats, data),
+          const SizedBox(height: 12),
+          if (boats.isEmpty)
+            const ReceiptEmptyState(
+              icon: Icons.directions_boat_outlined,
+              title: 'Chưa có chuyến ghe',
+              message: 'Kỳ này chưa có phiếu nhập.',
+            )
+          else
+            ...boats.map(
+              (boat) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _boatCard(boat, _int(data['totalKg'])),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -251,189 +318,456 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
             'TỔNG KHỐI LƯỢNG',
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
               color: Color(0xFFBAE6FD),
-              letterSpacing: 0.6,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             AppFormatters.formatKgToTons(kg),
             style: const TextStyle(
-              fontSize: 31,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _summaryChip(Icons.receipt_long_outlined, '$trips chuyến'),
-              _summaryChip(
-                Icons.scale_outlined,
-                '${AppFormatters.formatKg(avgKg)}/chuyến',
-              ),
-              if (avgPrice > 0)
-                _summaryChip(
-                  Icons.sell_outlined,
-                  AppFormatters.formatPricePerKg(avgPrice),
-                ),
-            ],
-          ),
-          if (amount > 0) ...[
-            const Divider(color: Color(0xFF38BDF8), height: 26),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Tổng thành tiền',
-                    style: TextStyle(fontSize: 16, color: Color(0xFFBAE6FD)),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    AppFormatters.formatFullCurrency(amount),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          _metricRow('Số chuyến', '$trips chuyến'),
+          _metricRow('Trung bình/chuyến', AppFormatters.formatKg(avgKg)),
+          if (avgPrice > 0)
+            _metricRow(
+              'Giá trung bình',
+              AppFormatters.formatPricePerKg(avgPrice),
             ),
-          ],
+          if (amount > 0)
+            _metricRow(
+              'Tổng thành tiền',
+              AppFormatters.formatFullCurrency(amount),
+              strong: true,
+            ),
         ],
       ),
     );
   }
 
-  Widget _summaryChip(IconData icon, String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
+  Widget _metricRow(String label, String value, {bool strong = false}) =>
+      Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 16, color: Color(0xFFBAE6FD)),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: strong ? 19 : 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _comparison(
+    Map<String, dynamic> current,
+    Map<String, dynamic> previous,
+  ) {
+    return ReceiptSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ReceiptSectionTitle('So với kỳ trước'),
+          const SizedBox(height: 12),
+          _changeRow(
+            'Khối lượng',
+            _int(current['totalKg']),
+            _int(previous['totalKg']),
+            AppFormatters.formatKgToTons,
+          ),
+          _changeRow(
+            'Số chuyến',
+            _int(current['trips']),
+            _int(previous['trips']),
+            (value) => '$value chuyến',
+          ),
+          _changeRow(
+            'Thành tiền',
+            _int(current['totalAmount']),
+            _int(previous['totalAmount']),
+            AppFormatters.formatCurrency,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _changeRow(
+    String label,
+    int current,
+    int previous,
+    String Function(int) formatter,
+  ) {
+    final change = previous == 0 ? null : (current - previous) * 100 / previous;
+    final positive = (change ?? 0) >= 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: ReceiptUi.secondaryText(context),
+                  ),
+                ),
+                Text(
+                  formatter(current),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              color: change == null
+                  ? ReceiptUi.line(context)
+                  : (positive
+                        ? ReceiptColors.greenSoft
+                        : const Color(0xFFFEE2E2)),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              change == null
+                  ? 'Chưa có kỳ trước'
+                  : '${positive ? '+' : ''}${change.toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: change == null
+                    ? ReceiptUi.secondaryText(context)
+                    : (positive ? ReceiptColors.green : ReceiptColors.red),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _operatingMetrics(Map<String, dynamic> data) {
+    final trips = _int(data['trips']);
+    final kg = _int(data['totalKg']);
+    final amount = _int(data['totalAmount']);
+    final activeDays = _timeRows(
+      data,
+    ).where((row) => _int(row['trips']) > 0).length;
+    final values = <(String, String, IconData)>[
+      ('Ngày có chuyến', '$activeDays ngày', Icons.event_available_outlined),
+      (
+        'TB chuyến/ngày',
+        activeDays == 0 ? '0' : (trips / activeDays).toStringAsFixed(1),
+        Icons.route_outlined,
+      ),
+      (
+        'TB khối lượng/chuyến',
+        AppFormatters.formatKg(trips == 0 ? 0 : kg ~/ trips),
+        Icons.scale_outlined,
+      ),
+      (
+        'TB tiền/chuyến',
+        AppFormatters.formatCurrency(trips == 0 ? 0 : amount ~/ trips),
+        Icons.payments_outlined,
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.white),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+        const ReceiptSectionTitle('Hiệu quả hoạt động'),
+        const SizedBox(height: 8),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = (constraints.maxWidth - 10) / 2;
+            return Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: values
+                  .map(
+                    (item) => SizedBox(
+                      width: width,
+                      child: ReceiptSurface(
+                        padding: const EdgeInsets.all(13),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(item.$3, color: ReceiptColors.blue),
+                            const SizedBox(height: 8),
+                            Text(
+                              item.$1,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: ReceiptUi.secondaryText(context),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              item.$2,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _highlights(
+    Map<String, dynamic> data,
+    List<Map<String, dynamic>> boats,
+  ) {
+    final rows =
+        _timeRows(data).where((row) => _int(row['totalKg']) > 0).toList()
+          ..sort((a, b) => _int(b['totalKg']).compareTo(_int(a['totalKg'])));
+    final topBoat = boats.isEmpty ? null : boats.first;
+    return ReceiptSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ReceiptSectionTitle('Điểm nổi bật'),
+          const SizedBox(height: 10),
+          if (rows.isNotEmpty)
+            _insight(
+              Icons.emoji_events_outlined,
+              'Ngày/tháng cao nhất',
+              '${_rowLabel(rows.first)} · ${AppFormatters.formatKgToTons(_int(rows.first['totalKg']))}',
+            ),
+          if (rows.length > 1)
+            _insight(
+              Icons.south_outlined,
+              'Ngày/tháng thấp nhất có chuyến',
+              '${_rowLabel(rows.last)} · ${AppFormatters.formatKgToTons(_int(rows.last['totalKg']))}',
+            ),
+          if (topBoat != null)
+            _insight(
+              Icons.directions_boat_outlined,
+              'Ghe nhiều hàng nhất',
+              '${topBoat['boatNumber']} · ${AppFormatters.formatKgToTons(_int(topBoat['totalKg']))}',
+            ),
+          if (rows.isEmpty && topBoat == null)
+            Text(
+              'Chưa có dữ liệu trong kỳ này.',
+              style: TextStyle(
+                fontSize: 16,
+                color: ReceiptUi.secondaryText(context),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _insight(IconData icon, String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 23, color: ReceiptColors.blue),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: ReceiptUi.secondaryText(context),
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     ),
   );
 
-  List<ReceiptChartPoint> _chartPoints(Map<String, dynamic> data) {
-    if (_period == _Period.year) {
-      final rows = List.from(data['monthlyTotals'] ?? []);
-      return rows.map((row) {
-        final item = Map<String, dynamic>.from(row as Map);
-        final raw = '${item['month'] ?? ''}';
-        return ReceiptChartPoint(
-          raw.length >= 7 ? raw.substring(5) : raw,
-          _int(item['totalKg']) / 1000,
-        );
-      }).toList();
-    }
-    final rows = List.from(data['dailyTotals'] ?? []);
-    return rows.map((row) {
-      final item = Map<String, dynamic>.from(row as Map);
-      final raw = '${item['date'] ?? ''}';
-      return ReceiptChartPoint(
-        raw.length >= 10 ? raw.substring(8) : raw,
-        _int(item['totalKg']) / 1000,
-      );
-    }).toList();
+  Widget _breakdown(Map<String, dynamic> data) {
+    final points = _timeRows(data);
+    return ReceiptSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ReceiptSectionTitle('Chi tiết từng kỳ'),
+          const SizedBox(height: 8),
+          if (points.isEmpty)
+            Text(
+              'Chưa có dữ liệu.',
+              style: TextStyle(
+                fontSize: 16,
+                color: ReceiptUi.secondaryText(context),
+              ),
+            )
+          else
+            ...points.map((row) => _periodRow(row)),
+        ],
+      ),
+    );
   }
+
+  Widget _periodRow(Map<String, dynamic> row) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 9),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            _rowLabel(row),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+        ),
+        Text(
+          '${_int(row['trips'])} chuyến',
+          style: TextStyle(
+            fontSize: 14,
+            color: ReceiptUi.secondaryText(context),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Text(
+          AppFormatters.formatKgToTons(_int(row['totalKg'])),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: ReceiptColors.blueStrong,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _boatHeader(
+    List<Map<String, dynamic>> boats,
+    Map<String, dynamic> data,
+  ) => ReceiptSurface(
+    child: Row(
+      children: [
+        const Icon(
+          Icons.directions_boat_rounded,
+          size: 34,
+          color: ReceiptColors.blue,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Thống kê theo ghe',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+              ),
+              Text(
+                '${boats.length} ghe · ${_int(data['trips'])} chuyến',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: ReceiptUi.secondaryText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _boatCard(Map<String, dynamic> boat, int totalKg) {
     final kg = _int(boat['totalKg']);
     final trips = _int(boat['trips']);
     final amount = _int(boat['totalAmount']);
-    final share = totalKg > 0 ? kg * 100 / totalKg : 0.0;
-    final avg = trips > 0 ? kg ~/ trips : 0;
+    final share = totalKg == 0 ? 0.0 : kg / totalKg;
+    final isAg = '${boat['boatNumber'] ?? ''}'.toUpperCase().startsWith('AG');
+    final accent = isAg ? ReceiptColors.green : ReceiptColors.blue;
+    final soft = isAg ? ReceiptColors.greenSoft : ReceiptColors.blueSoft;
     return ReceiptSurface(
+      borderColor: accent.withValues(alpha: 0.6),
+      surfaceColor: soft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: ReceiptColors.blueSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.directions_boat_outlined,
-                  color: ReceiptColors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${boat['boatNumber'] ?? 'Không rõ'}',
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '$trips chuyến · TB ${AppFormatters.formatKgToTons(avg)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: ReceiptUi.secondaryText(context),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  '${boat['boatNumber'] ?? 'Không rõ'}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               Text(
                 AppFormatters.formatKgToTons(kg),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w900,
-                  color: ReceiptColors.blueStrong,
+                  color: accent,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          Text(
+            '$trips chuyến · TB ${AppFormatters.formatKgToTons(trips == 0 ? 0 : kg ~/ trips)}/chuyến',
+            style: TextStyle(
+              fontSize: 15,
+              color: ReceiptUi.secondaryText(context),
+            ),
+          ),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
-              value: share / 100,
-              minHeight: 8,
+              value: share,
+              minHeight: 9,
               backgroundColor: ReceiptUi.line(context),
-              color: ReceiptColors.blue,
+              color: accent,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Text(
-                '${share.toStringAsFixed(1)}% tổng khối lượng',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: ReceiptUi.secondaryText(context),
-                ),
+                '${(share * 100).toStringAsFixed(1)}% tổng khối lượng',
+                style: const TextStyle(fontSize: 14),
               ),
               if (amount > 0)
                 Expanded(
@@ -442,7 +776,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                     textAlign: TextAlign.right,
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       color: ReceiptColors.green,
                     ),
                   ),
@@ -454,5 +788,52 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     );
   }
 
+  List<Map<String, dynamic>> _boats(Map<String, dynamic> data) =>
+      List<Map<String, dynamic>>.from(
+        (data['byBoat'] as List? ?? const []).map(
+          (e) => Map<String, dynamic>.from(e as Map),
+        ),
+      );
+  List<Map<String, dynamic>> _timeRows(Map<String, dynamic> data) =>
+      List<Map<String, dynamic>>.from(
+        ((data[_period == _Period.year ? 'monthlyTotals' : 'dailyTotals'])
+                    as List? ??
+                const [])
+            .map((e) => Map<String, dynamic>.from(e as Map)),
+      );
+  String _rowLabel(Map<String, dynamic> row) {
+    final raw = '${row[_period == _Period.year ? 'month' : 'date'] ?? ''}';
+    if (_period == _Period.year && raw.length >= 7) {
+      return 'T${int.tryParse(raw.substring(5)) ?? raw.substring(5)}';
+    }
+    if (raw.length >= 10) {
+      final date = DateTime.tryParse(raw);
+      final weekday = date == null ? '' : _shortWeekday(date);
+      return '$weekday ${raw.substring(8)}/${raw.substring(5, 7)}'.trim();
+    }
+    return raw;
+  }
+
+  String _periodLabel() {
+    if (_period == _Period.month) {
+      return 'Tháng ${_anchor.month}/${_anchor.year}';
+    }
+    if (_period == _Period.year) return 'Năm ${_anchor.year}';
+    final monday = _anchor.subtract(Duration(days: _anchor.weekday - 1));
+    final sunday = monday.add(const Duration(days: 6));
+    return 'Thứ Hai ${monday.day}/${monday.month} – Chủ Nhật ${sunday.day}/${sunday.month}';
+  }
+
+  String _shortWeekday(DateTime date) => switch (date.weekday) {
+    DateTime.monday => 'T2',
+    DateTime.tuesday => 'T3',
+    DateTime.wednesday => 'T4',
+    DateTime.thursday => 'T5',
+    DateTime.friday => 'T6',
+    DateTime.saturday => 'T7',
+    _ => 'CN',
+  };
+
+  String _two(int value) => value.toString().padLeft(2, '0');
   int _int(dynamic value) => (value as num?)?.toInt() ?? 0;
 }

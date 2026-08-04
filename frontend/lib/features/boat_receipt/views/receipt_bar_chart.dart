@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'receipt_ui.dart';
 
 class ReceiptChartPoint {
-  const ReceiptChartPoint(this.label, this.value);
+  const ReceiptChartPoint(this.label, this.value, {this.color});
   final String label;
   final double value;
+  final Color? color;
 }
 
 class ReceiptBarChart extends StatelessWidget {
@@ -68,7 +69,6 @@ class _BarChartPainter extends CustomPainter {
     final barWidth = (slot - gap).clamp(18.0, 34.0);
     final gridPaint = Paint()
       ..color = dark ? ReceiptColors.darkLine : ReceiptColors.line;
-    final barPaint = Paint()..color = ReceiptColors.blue;
     final textColor = dark ? Colors.white : ReceiptColors.ink;
 
     for (var line = 0; line <= 3; line++) {
@@ -78,6 +78,7 @@ class _BarChartPainter extends CustomPainter {
 
     for (var index = 0; index < points.length; index++) {
       final point = points[index];
+      final barPaint = Paint()..color = point.color ?? ReceiptColors.blue;
       final height = maxValue == 0
           ? 0.0
           : usableHeight * point.value / maxValue;

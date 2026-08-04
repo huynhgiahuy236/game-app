@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 abstract final class ReceiptColors {
   static const blue = Color(0xFF0369A1);
   static const blueStrong = Color(0xFF075985);
-  static const blueSoft = Color(0xFFE0F2FE);
+  static const blueSoft = Color(0xFFBAE6FD);
   static const green = Color(0xFF047857);
-  static const greenSoft = Color(0xFFD1FAE5);
+  static const greenSoft = Color(0xFFBBF7D0);
   static const amber = Color(0xFFB45309);
   static const red = Color(0xFFB91C1C);
   static const ink = Color(0xFF0F172A);
@@ -115,19 +115,26 @@ class ReceiptSurface extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.onTap,
+    this.borderColor,
+    this.surfaceColor,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final Color? borderColor;
+  final Color? surfaceColor;
 
   @override
   Widget build(BuildContext context) {
     final content = Ink(
       padding: padding,
       decoration: BoxDecoration(
-        color: ReceiptUi.surface(context),
+        color: surfaceColor ?? ReceiptUi.surface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ReceiptUi.line(context)),
+        border: Border.all(
+          color: borderColor ?? ReceiptUi.line(context),
+          width: borderColor == null ? 1 : 1.6,
+        ),
       ),
       child: child,
     );

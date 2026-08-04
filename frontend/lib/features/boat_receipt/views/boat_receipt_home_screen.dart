@@ -7,7 +7,6 @@ import '../models/boat_receipt_model.dart';
 import '../models/statistics_model.dart';
 import '../services/boat_receipt_repository.dart';
 import 'add_boat_receipt_screen.dart';
-import 'receipt_confirmation_screen.dart';
 import 'receipt_detail_screen.dart';
 import 'receipt_history_screen.dart';
 import 'receipt_statistics_screen.dart';
@@ -32,6 +31,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
   int _currentNavIndex = 0;
   int _statsInitialTab = 0;
   HomeSummaryModel? _summary;
+  Map<String, dynamic>? _weeklySummary;
   List<BoatReceiptModel> _recentReceipts = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -50,12 +50,15 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
     try {
       final results = await Future.wait([
         _repository.getHomeSummary(),
-        _repository.getReceipts(limit: 5),
+        _repository.getWeeklyStats(null),
+        _repository.getReceipts(limit: 5, sortBy: 'createdAt'),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = results[0] as HomeSummaryModel;
-        _recentReceipts = results[1] as List<BoatReceiptModel>;
+        _weeklySummary = results[1] as Map<String, dynamic>;
+        _recentReceipts = [...results[2] as List<BoatReceiptModel>]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       });
     } catch (error) {
       if (mounted) setState(() => _errorMessage = error.toString());
@@ -147,8 +150,6 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                   const SizedBox(height: 16),
                 ],
                 _primaryAction(),
-                const SizedBox(height: 12),
-                _manualAction(),
                 const SizedBox(height: 24),
                 const ReceiptSectionTitle('Tổng quan'),
                 const SizedBox(height: 10),
@@ -200,43 +201,17 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
     ),
   );
 
-  Widget _manualAction() => SizedBox(
-    height: 56,
-    child: OutlinedButton.icon(
-      onPressed: () async {
-        final saved = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                const ReceiptConfirmationScreen(inputMethod: 'manual'),
-          ),
-        );
-        if (saved == true) _loadData();
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: ReceiptColors.blue,
-        side: const BorderSide(color: ReceiptColors.blue),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      icon: const Icon(Icons.edit_note_rounded, size: 26),
-      label: const Text(
-        'Nhập thủ công',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-      ),
-    ),
-  );
-
   Widget _summaryCards() {
     final now = DateTime.now();
     return LayoutBuilder(
       builder: (context, constraints) {
         final cards = [
           _metricCard(
-            'Hôm nay',
-            '${_summary?.today.trips ?? 0} chuyến',
-            _summary?.today.weightKg ?? 0,
-            _summary?.today.totalAmount ?? 0,
-            Icons.today_outlined,
+            'Tuần này',
+            '${(_weeklySummary?['trips'] as num?)?.toInt() ?? 0} chuyến',
+            (_weeklySummary?['totalKg'] as num?)?.toInt() ?? 0,
+            (_weeklySummary?['totalAmount'] as num?)?.toInt() ?? 0,
+            Icons.view_week_outlined,
             0,
           ),
           _metricCard(
@@ -300,7 +275,14 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded),
+            Text(
+              trips,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: ReceiptColors.ink,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -313,13 +295,6 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          trips,
-          style: TextStyle(
-            fontSize: 15,
-            color: ReceiptUi.secondaryText(context),
-          ),
-        ),
         if (amount > 0) ...[
           const SizedBox(height: 6),
           Text(
@@ -335,70 +310,74 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
     ),
   );
 
-  Widget _receiptCard(BoatReceiptModel receipt) => ReceiptSurface(
-    onTap: () async {
-      final updated = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
-        ),
-      );
-      if (updated == true) _loadData();
-    },
-    child: Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: ReceiptColors.blueSoft,
-            borderRadius: BorderRadius.circular(12),
+  Widget _receiptCard(BoatReceiptModel receipt) {
+    final isAg = receipt.boatNumber.toUpperCase().startsWith('AG');
+    final accent = isAg ? ReceiptColors.green : ReceiptColors.blue;
+    final soft = isAg ? const Color(0xFFDCFCE7) : ReceiptColors.blueSoft;
+    return ReceiptSurface(
+      borderColor: accent.withValues(alpha: 0.55),
+      surfaceColor: soft,
+      onTap: () async {
+        final updated = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
           ),
-          child: const Icon(
-            Icons.directions_boat_outlined,
-            color: ReceiptColors.blue,
+        );
+        if (updated == true) _loadData();
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: soft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.directions_boat_outlined, color: accent),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  receipt.boatNumber,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  AppFormatters.formatDate(receipt.receiptDate),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: ReceiptUi.secondaryText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                receipt.boatNumber,
+                AppFormatters.formatKgToTons(receipt.weightKg),
                 style: const TextStyle(
-                  fontSize: 19,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
+                  color: ReceiptColors.blueStrong,
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                AppFormatters.formatDate(receipt.receiptDate),
-                style: TextStyle(
-                  fontSize: 15,
-                  color: ReceiptUi.secondaryText(context),
-                ),
-              ),
+              const SizedBox(height: 4),
+              const Icon(Icons.chevron_right_rounded, size: 22),
             ],
           ),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              AppFormatters.formatKgToTons(receipt.weightKg),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: ReceiptColors.blueStrong,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Icon(Icons.chevron_right_rounded, size: 22),
-          ],
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

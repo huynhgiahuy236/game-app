@@ -102,5 +102,25 @@ KG
         'DT-2764',
       );
     });
+
+    test('ghép ngày cân bị OCR tách dòng và nhầm chữ I thành số 1', () {
+      const rawText = '''
+Giờ cân vào:
+I1 /
+07 / 2025
+''';
+      expect(BoatReceiptOcrParser.parse(rawText).extractedDate, '11/07/2025');
+    });
+
+    test('đoán ghe hợp lệ khi chữ viết tay sai một chữ số', () {
+      const rawText = '''
+Số xe/Tên tàu:
+DT 2769
+''';
+      expect(
+        BoatReceiptOcrParser.parse(rawText).extractedBoatNumber,
+        'DT-2764',
+      );
+    });
   });
 }

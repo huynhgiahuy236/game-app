@@ -29,7 +29,26 @@ export interface ReceiptFilterOptions {
   to?: string;
   page?: number;
   limit?: number;
+  sortBy?: 'receiptDate' | 'createdAt';
 }
+
+const vietnamDayRange = (date: string): { start: Date; end: Date } => ({
+  start: new Date(`${date}T00:00:00.000+07:00`),
+  end: new Date(`${date}T23:59:59.999+07:00`),
+});
+
+const vietnamMonthRange = (year: number, month: number): { start: Date; end: Date } => {
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  return {
+    start: new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00.000+07:00`),
+    end: new Date(new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000+07:00`).getTime() - 1),
+  };
+};
+
+const vietnamToday = (): string => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date());
 
 export const createReceipt = async (
   userId: string,
@@ -137,42 +156,38 @@ export const getReceipts = async (
   }
 
   if (options.date) {
-    const startOfDay = new Date(options.date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(options.date);
-    endOfDay.setHours(23, 59, 59, 999);
-    query.receiptDate = { $gte: startOfDay, $lte: endOfDay };
+    const range = vietnamDayRange(options.date);
+    query.receiptDate = { $gte: range.start, $lte: range.end };
   } else if (options.month) {
     // YYYY-MM
     const [y, m] = options.month.split('-').map(Number);
-    const startOfMonth = new Date(y, m - 1, 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(y, m, 0, 23, 59, 59, 999);
-    query.receiptDate = { $gte: startOfMonth, $lte: endOfMonth };
+    const range = vietnamMonthRange(y, m);
+    query.receiptDate = { $gte: range.start, $lte: range.end };
   } else if (options.year) {
     const y = Number(options.year);
-    const startOfYear = new Date(y, 0, 1, 0, 0, 0, 0);
-    const endOfYear = new Date(y, 11, 31, 23, 59, 59, 999);
+    const startOfYear = new Date(`${y}-01-01T00:00:00.000+07:00`);
+    const endOfYear = new Date(`${y + 1}-01-01T00:00:00.000+07:00`);
+    endOfYear.setMilliseconds(endOfYear.getMilliseconds() - 1);
     query.receiptDate = { $gte: startOfYear, $lte: endOfYear };
   } else if (options.from || options.to) {
     query.receiptDate = {};
     if (options.from) {
-      const fromDate = new Date(options.from);
-      fromDate.setHours(0, 0, 0, 0);
-      query.receiptDate.$gte = fromDate;
+      query.receiptDate.$gte = vietnamDayRange(options.from).start;
     }
     if (options.to) {
-      const toDate = new Date(options.to);
-      toDate.setHours(23, 59, 59, 999);
-      query.receiptDate.$lte = toDate;
+      query.receiptDate.$lte = vietnamDayRange(options.to).end;
     }
   }
 
   const page = Math.max(1, Number(options.page) || 1);
   const limit = Math.max(1, Math.min(100, Number(options.limit) || 20));
   const skip = (page - 1) * limit;
+  const sort: Record<string, 1 | -1> = options.sortBy === 'createdAt'
+    ? { createdAt: -1 }
+    : { receiptDate: -1, createdAt: -1 };
 
   const [receipts, total] = await Promise.all([
-    BoatReceiptModel.find(query).sort({ receiptDate: -1, createdAt: -1 }).skip(skip).limit(limit),
+    BoatReceiptModel.find(query).sort(sort).skip(skip).limit(limit),
     BoatReceiptModel.countDocuments(query),
   ]);
 
@@ -275,13 +290,10 @@ export const deleteReceipt = async (
 
 export const getHomeSummary = async (userId: string) => {
   const uId = new Types.ObjectId(userId);
-  const now = new Date();
-
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const today = vietnamToday();
+  const [year, month] = today.split('-').map(Number);
+  const { start: startOfDay, end: endOfDay } = vietnamDayRange(today);
+  const { start: startOfMonth, end: endOfMonth } = vietnamMonthRange(year, month);
 
   const [todayAgg, monthAgg] = await Promise.all([
     BoatReceiptModel.aggregate([
@@ -322,10 +334,8 @@ export const getHomeSummary = async (userId: string) => {
 
 export const getDailyStats = async (userId: string, dateStr?: string) => {
   const uId = new Types.ObjectId(userId);
-  const targetDate = dateStr ? new Date(dateStr) : new Date();
-
-  const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
-  const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+  const targetDate = dateStr || vietnamToday();
+  const { start: startOfDay, end: endOfDay } = vietnamDayRange(targetDate);
 
   const match = { userId: uId, deletedAt: null, receiptDate: { $gte: startOfDay, $lte: endOfDay } };
 
@@ -349,7 +359,7 @@ export const getDailyStats = async (userId: string, dateStr?: string) => {
   const avgPricePerKg = totalKg > 0 ? Math.round(totalAmount / totalKg) : 0;
 
   return {
-    date: startOfDay.toISOString().split('T')[0],
+    date: targetDate,
     trips,
     totalKg,
     totalTons: Number((totalKg / 1000).toFixed(3)),
@@ -378,8 +388,9 @@ export const getWeeklyStats = async (userId: string, dateStr?: string) => {
   const startOfWeek = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - dayOffset, 0, 0, 0, 0);
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
-  endOfWeek.setHours(23, 59, 59, 999);
-  const match = { userId: uId, deletedAt: null, receiptDate: { $gte: startOfWeek, $lte: endOfWeek } };
+  const startLabel = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`;
+  const endLabel = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`;
+  const match = { userId: uId, deletedAt: null, receiptDate: { $gte: vietnamDayRange(startLabel).start, $lte: vietnamDayRange(endLabel).end } };
 
   const [summary, dailyGroup, boatGroup] = await Promise.all([
     BoatReceiptModel.aggregate([
@@ -388,7 +399,7 @@ export const getWeeklyStats = async (userId: string, dateStr?: string) => {
     ]),
     BoatReceiptModel.aggregate([
       { $match: match },
-      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$receiptDate' } }, trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$receiptDate', timezone: '+07:00' } }, trips: { $sum: 1 }, totalKg: { $sum: '$weightKg' }, totalAmount: { $sum: '$totalAmount' } } },
       { $sort: { _id: 1 } },
     ]),
     BoatReceiptModel.aggregate([
@@ -402,8 +413,8 @@ export const getWeeklyStats = async (userId: string, dateStr?: string) => {
   const totalKg = summary[0]?.totalKg || 0;
   const totalAmount = summary[0]?.totalAmount || 0;
   return {
-    startDate: startOfWeek.toISOString().split('T')[0],
-    endDate: endOfWeek.toISOString().split('T')[0],
+    startDate: startLabel,
+    endDate: endLabel,
     trips,
     totalKg,
     totalTons: Number((totalKg / 1000).toFixed(3)),
@@ -430,8 +441,9 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
     month = d.getMonth();
   }
 
-  const startOfMonth = new Date(year, month, 1, 0, 0, 0, 0);
-  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  const monthRange = vietnamMonthRange(year, month + 1);
+  const startOfMonth = monthRange.start;
+  const endOfMonth = monthRange.end;
   const match = { userId: uId, deletedAt: null, receiptDate: { $gte: startOfMonth, $lte: endOfMonth } };
 
   const [summary, dailyGroup, boatGroup] = await Promise.all([
@@ -443,7 +455,7 @@ export const getMonthlyStats = async (userId: string, monthStr?: string) => {
       { $match: match },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$receiptDate' } },
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$receiptDate', timezone: '+07:00' } },
           trips: { $sum: 1 },
           totalKg: { $sum: '$weightKg' },
           totalAmount: { $sum: '$totalAmount' },
@@ -508,8 +520,9 @@ export const getYearlyStats = async (userId: string, yearStr?: string) => {
   const uId = new Types.ObjectId(userId);
   const year = yearStr ? Number(yearStr) : new Date().getFullYear();
 
-  const startOfYear = new Date(year, 0, 1, 0, 0, 0, 0);
-  const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+  const startOfYear = new Date(`${year}-01-01T00:00:00.000+07:00`);
+  const endOfYear = new Date(`${year + 1}-01-01T00:00:00.000+07:00`);
+  endOfYear.setMilliseconds(endOfYear.getMilliseconds() - 1);
   const match = { userId: uId, deletedAt: null, receiptDate: { $gte: startOfYear, $lte: endOfYear } };
 
   const [summary, monthlyGroup, boatGroup] = await Promise.all([
@@ -521,7 +534,7 @@ export const getYearlyStats = async (userId: string, yearStr?: string) => {
       { $match: match },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m', date: '$receiptDate' } },
+          _id: { $dateToString: { format: '%Y-%m', date: '$receiptDate', timezone: '+07:00' } },
           trips: { $sum: 1 },
           totalKg: { $sum: '$weightKg' },
           totalAmount: { $sum: '$totalAmount' },

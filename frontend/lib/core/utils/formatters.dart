@@ -8,7 +8,9 @@ class AppFormatters {
     String formatted = formatter.format(tons);
     // Trim trailing zeroes after decimal point if present
     if (formatted.contains(',')) {
-      formatted = formatted.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r',+$'), '');
+      formatted = formatted
+          .replaceAll(RegExp(r'0+$'), '')
+          .replaceAll(RegExp(r',+$'), '');
     }
     return '$formatted tấn';
   }
@@ -19,12 +21,22 @@ class AppFormatters {
   }
 
   static String formatDate(DateTime date) {
-    return DateFormat('dd/MM/yyyy').format(date);
+    return '${formatWeekday(date)}, ${DateFormat('dd/MM/yyyy').format(date)}';
   }
 
   static String formatDateTime(DateTime date) {
-    return DateFormat('dd/MM/yyyy HH:mm').format(date);
+    return '${formatWeekday(date)}, ${DateFormat('dd/MM/yyyy HH:mm').format(date)}';
   }
+
+  static String formatWeekday(DateTime date) => switch (date.weekday) {
+    DateTime.monday => 'Thứ Hai',
+    DateTime.tuesday => 'Thứ Ba',
+    DateTime.wednesday => 'Thứ Tư',
+    DateTime.thursday => 'Thứ Năm',
+    DateTime.friday => 'Thứ Sáu',
+    DateTime.saturday => 'Thứ Bảy',
+    _ => 'Chủ Nhật',
+  };
 
   static String formatMonthYear(DateTime date) {
     return DateFormat('MM/yyyy').format(date);

@@ -59,6 +59,9 @@ class BoatReceiptOcrParser {
   static String _formatDate(RegExpMatch match) =>
       '${match.group(1)!.padLeft(2, '0')}/${match.group(2)!.padLeft(2, '0')}/${match.group(3)}';
 
+  static String _ocrDigits(String value) =>
+      value.replaceAll(RegExp(r'[oO]'), '0').replaceAll(RegExp(r'[Il|]'), '1');
+
   static String? _extractDate(List<String> lines) {
     final weighInLabelIndexes = <int>[
       for (var i = 0; i < lines.length; i++)
@@ -73,7 +76,12 @@ class BoatReceiptOcrParser {
             .sublist(i > 0 ? i - 1 : 0, (i + 2).clamp(0, lines.length))
             .join(' '),
       );
-      for (final match in _datePattern.allMatches(lines[i])) {
+      // Handwriting is frequently split into 2–3 ML Kit lines. Join a small
+      // window and normalize common O/0, I/1 mistakes before matching.
+      final scanText = _ocrDigits(
+        lines.sublist(i, (i + 3).clamp(0, lines.length)).join(' '),
+      );
+      for (final match in _datePattern.allMatches(scanText)) {
         var score = 0;
         // ML Kit often separates handwriting from the printed label by several
         // lines. A date shortly after "Giờ cân vào" is the operational date.
@@ -132,6 +140,29 @@ class BoatReceiptOcrParser {
     if (compactText.contains('26911')) return 'AG-26911';
     if (compactText.contains('2764')) return 'DT-2764';
 
+    // Only two boats are valid for this receipt type. Accept one bad/missing
+    // handwritten digit when the candidate is close to the boat label.
+    for (var i = 0; i < lines.length; i++) {
+      final context = _plain(
+        lines
+            .sublist(i > 2 ? i - 2 : 0, (i + 3).clamp(0, lines.length))
+            .join(' '),
+      );
+      if (!(context.contains('so xe') ||
+          context.contains('ten tau') ||
+          context.contains('so ghe'))) {
+        continue;
+      }
+      for (final match in RegExp(
+        r'\b[0-9O]{3,5}\b',
+        caseSensitive: false,
+      ).allMatches(lines[i])) {
+        final digits = match.group(0)!.toUpperCase().replaceAll('O', '0');
+        if (_editDistance(digits, '26911') <= 1) return 'AG-26911';
+        if (_editDistance(digits, '2764') <= 1) return 'DT-2764';
+      }
+    }
+
     final candidates = <({String value, int score, int order})>[];
     for (var i = 0; i < lines.length; i++) {
       final from = i > 1 ? i - 2 : 0;
@@ -167,6 +198,24 @@ class BoatReceiptOcrParser {
       return score != 0 ? score : a.order.compareTo(b.order);
     });
     return candidates.first.value;
+  }
+
+  static int _editDistance(String left, String right) {
+    var previous = List<int>.generate(right.length + 1, (i) => i);
+    for (var i = 0; i < left.length; i++) {
+      final current = <int>[i + 1];
+      for (var j = 0; j < right.length; j++) {
+        current.add(
+          [
+            current[j] + 1,
+            previous[j + 1] + 1,
+            previous[j] + (left[i] == right[j] ? 0 : 1),
+          ].reduce((a, b) => a < b ? a : b),
+        );
+      }
+      previous = current;
+    }
+    return previous.last;
   }
 
   static String? _extractWeight(List<String> lines) {

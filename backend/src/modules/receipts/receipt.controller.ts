@@ -24,6 +24,7 @@ export const getReceipts = asyncHandler(async (req: AuthenticatedRequest, res: R
     to: req.query.to as string,
     page: req.query.page ? Number(req.query.page) : 1,
     limit: req.query.limit ? Number(req.query.limit) : 20,
+    sortBy: req.query.sortBy === 'createdAt' ? 'createdAt' as const : 'receiptDate' as const,
   };
 
   const result = await receiptService.getReceipts(userId, options);

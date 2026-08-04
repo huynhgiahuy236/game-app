@@ -61,6 +61,7 @@ class BoatReceiptRepository {
     String? to,
     int page = 1,
     int limit = 20,
+    String? sortBy,
   }) async {
     final queryParams = <String>[];
     if (date != null && date.isNotEmpty) queryParams.add('date=$date');
@@ -73,12 +74,42 @@ class BoatReceiptRepository {
     if (to != null && to.isNotEmpty) queryParams.add('to=$to');
     queryParams.add('page=$page');
     queryParams.add('limit=$limit');
+    if (sortBy != null) queryParams.add('sortBy=$sortBy');
 
     final endpoint = '/receipts?${queryParams.join('&')}';
     final resData = await _apiClient.get(endpoint);
 
     final List list = resData as List;
     return list.map((item) => BoatReceiptModel.fromJson(item)).toList();
+  }
+
+  Future<List<BoatReceiptModel>> getAllReceipts({
+    String? date,
+    String? month,
+    String? year,
+    String? boatNumber,
+    String? from,
+    String? to,
+  }) async {
+    const pageSize = 100;
+    final all = <BoatReceiptModel>[];
+    var page = 1;
+    while (true) {
+      final batch = await getReceipts(
+        date: date,
+        month: month,
+        year: year,
+        boatNumber: boatNumber,
+        from: from,
+        to: to,
+        page: page,
+        limit: pageSize,
+      );
+      all.addAll(batch);
+      if (batch.length < pageSize) break;
+      page++;
+    }
+    return all;
   }
 
   Future<BoatReceiptModel> getReceiptById(String id) async {
