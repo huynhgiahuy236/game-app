@@ -10,6 +10,7 @@ router.use(authenticateToken);
 // Statistics routes
 router.get('/statistics/summary', receiptController.getHomeSummary);
 router.get('/statistics/daily', receiptController.getDailyStats);
+router.get('/statistics/weekly', receiptController.getWeeklyStats);
 router.get('/statistics/monthly', receiptController.getMonthlyStats);
 router.get('/statistics/yearly', receiptController.getYearlyStats);
 router.get('/statistics/by-boat', receiptController.getByBoatStats);

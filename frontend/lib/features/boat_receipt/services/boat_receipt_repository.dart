@@ -120,6 +120,92 @@ class BoatReceiptRepository {
     return await _apiClient.get('/receipts/statistics/daily$query');
   }
 
+  Future<Map<String, dynamic>> getWeeklyStats(String? date) async {
+    final query = date != null ? '?date=$date' : '';
+    try {
+      return await _apiClient.get('/receipts/statistics/weekly$query');
+    } on ApiException catch (error) {
+      // Máy chủ cũ chưa có API tuần. Ghép 7 kết quả ngày để ứng dụng vẫn
+      // hoạt động trong thời gian backend đang được cập nhật.
+      if (error.statusCode != 404) rethrow;
+      return _buildWeekFromDaily(date);
+    }
+  }
+
+  Future<Map<String, dynamic>> _buildWeekFromDaily(String? date) async {
+    final anchor = DateTime.tryParse(date ?? '') ?? DateTime.now();
+    final monday = DateTime(
+      anchor.year,
+      anchor.month,
+      anchor.day - anchor.weekday + 1,
+    );
+    final days = await Future.wait(
+      List.generate(7, (index) {
+        final day = monday.add(Duration(days: index));
+        final value =
+            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+        return getDailyStats(value);
+      }),
+    );
+
+    var trips = 0;
+    var totalKg = 0;
+    var totalAmount = 0;
+    final boats = <String, Map<String, dynamic>>{};
+    final dailyTotals = <Map<String, dynamic>>[];
+
+    for (var index = 0; index < days.length; index++) {
+      final day = days[index];
+      final dayTrips = (day['trips'] as num?)?.toInt() ?? 0;
+      final dayKg = (day['totalKg'] as num?)?.toInt() ?? 0;
+      final dayAmount = (day['totalAmount'] as num?)?.toInt() ?? 0;
+      trips += dayTrips;
+      totalKg += dayKg;
+      totalAmount += dayAmount;
+      final dateValue = monday.add(Duration(days: index));
+      dailyTotals.add({
+        'date':
+            '${dateValue.year}-${dateValue.month.toString().padLeft(2, '0')}-${dateValue.day.toString().padLeft(2, '0')}',
+        'trips': dayTrips,
+        'totalKg': dayKg,
+        'totalAmount': dayAmount,
+      });
+      for (final rawBoat in (day['byBoat'] as List? ?? const [])) {
+        final boat = Map<String, dynamic>.from(rawBoat as Map);
+        final number = '${boat['boatNumber'] ?? 'Không rõ'}';
+        final aggregate = boats.putIfAbsent(
+          number,
+          () => {
+            'boatNumber': number,
+            'trips': 0,
+            'totalKg': 0,
+            'totalAmount': 0,
+          },
+        );
+        aggregate['trips'] =
+            (aggregate['trips'] as int) +
+            ((boat['trips'] as num?)?.toInt() ?? 0);
+        aggregate['totalKg'] =
+            (aggregate['totalKg'] as int) +
+            ((boat['totalKg'] as num?)?.toInt() ?? 0);
+        aggregate['totalAmount'] =
+            (aggregate['totalAmount'] as int) +
+            ((boat['totalAmount'] as num?)?.toInt() ?? 0);
+      }
+    }
+    final byBoat = boats.values.toList()
+      ..sort((a, b) => (b['totalKg'] as int).compareTo(a['totalKg'] as int));
+    return {
+      'trips': trips,
+      'totalKg': totalKg,
+      'totalAmount': totalAmount,
+      'avgPricePerKg': totalKg > 0 ? (totalAmount / totalKg).round() : 0,
+      'avgKgPerTrip': trips > 0 ? (totalKg / trips).round() : 0,
+      'dailyTotals': dailyTotals,
+      'byBoat': byBoat,
+    };
+  }
+
   Future<Map<String, dynamic>> getMonthlyStats(String? month) async {
     final query = month != null ? '?month=$month' : '';
     return await _apiClient.get('/receipts/statistics/monthly$query');
@@ -131,7 +217,9 @@ class BoatReceiptRepository {
   }
 
   Future<List<dynamic>> getByBoatStats(String? boatNumber) async {
-    final query = boatNumber != null ? '?boatNumber=${Uri.encodeComponent(boatNumber)}' : '';
+    final query = boatNumber != null
+        ? '?boatNumber=${Uri.encodeComponent(boatNumber)}'
+        : '';
     return await _apiClient.get('/receipts/statistics/by-boat$query');
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/auth/services/auth_repository.dart';
@@ -47,9 +48,16 @@ class _GameAppState extends State<GameApp> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.directions_boat_filled, size: 80, color: Colors.white),
+                  Icon(
+                    Icons.directions_boat_filled,
+                    size: 80,
+                    color: Colors.white,
+                  ),
                   SizedBox(height: 24),
-                  CircularProgressIndicator(color: Colors.amber, strokeWidth: 4),
+                  CircularProgressIndicator(
+                    color: Colors.amber,
+                    strokeWidth: 4,
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'ĐANG TẢI ỨNG DỤNG CHỊ MƯỜI...',
@@ -83,6 +91,13 @@ class _GameAppState extends State<GameApp> {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
+          locale: const Locale('vi', 'VN'),
+          supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           home: homeWidget,
         );
       },

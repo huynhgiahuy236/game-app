@@ -8,6 +8,10 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Chị Mười</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Dùng camera để chụp và đọc thông tin phiếu nhập hàng.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Chọn ảnh phiếu nhập hàng từ thư viện để nhận diện thông tin.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

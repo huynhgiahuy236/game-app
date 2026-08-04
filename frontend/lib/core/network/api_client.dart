@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/env_config.dart';
 
@@ -111,7 +112,11 @@ class ApiClient {
       request.fields.addAll(fields);
 
       if (imageFile != null && await imageFile.exists()) {
-        final multipartFile = await http.MultipartFile.fromPath('image', imageFile.path);
+        final multipartFile = await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+          contentType: _imageMediaType(imageFile.path),
+        );
         request.files.add(multipartFile);
       }
 
@@ -120,7 +125,31 @@ class ApiClient {
     });
   }
 
-  Future<dynamic> _sendRequest(Future<http.Response> Function() requestFn) async {
+  MediaType _imageMediaType(String path) {
+    final extension = path.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+      case 'jpe':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'webp':
+        return MediaType('image', 'webp');
+      case 'heic':
+        return MediaType('image', 'heic');
+      case 'heif':
+        return MediaType('image', 'heif');
+      default:
+        // ImagePicker normally provides one of the formats above. JPEG is the
+        // safest fallback for camera files whose temporary path has no suffix.
+        return MediaType('image', 'jpeg');
+    }
+  }
+
+  Future<dynamic> _sendRequest(
+    Future<http.Response> Function() requestFn,
+  ) async {
     try {
       var response = await requestFn();
 
@@ -133,7 +162,9 @@ class ApiClient {
 
       return _processResponse(response);
     } on SocketException {
-      throw ApiException('Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc bật server.');
+      throw ApiException(
+        'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc bật server.',
+      );
     } on ApiException {
       rethrow;
     } catch (e) {
@@ -176,13 +207,17 @@ class ApiClient {
     try {
       jsonBody = jsonDecode(response.body);
     } catch (_) {
-      throw ApiException('Dữ liệu từ máy chủ không đúng định dạng', response.statusCode);
+      throw ApiException(
+        'Dữ liệu từ máy chủ không đúng định dạng',
+        response.statusCode,
+      );
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonBody['data'];
     } else {
-      final msg = jsonBody['message'] ?? 'Đã có lỗi xảy ra (${response.statusCode})';
+      final msg =
+          jsonBody['message'] ?? 'Đã có lỗi xảy ra (${response.statusCode})';
       throw ApiException(msg, response.statusCode);
     }
   }

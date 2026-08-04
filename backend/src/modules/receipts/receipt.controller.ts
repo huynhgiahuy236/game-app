@@ -73,6 +73,13 @@ export const getDailyStats = asyncHandler(async (req: AuthenticatedRequest, res:
   return sendResponse(res, 200, 'Lấy thống kê theo ngày thành công', stats);
 });
 
+export const getWeeklyStats = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!._id.toString();
+  const date = req.query.date as string;
+  const stats = await receiptService.getWeeklyStats(userId, date);
+  return sendResponse(res, 200, 'Lấy thống kê theo tuần thành công', stats);
+});
+
 export const getMonthlyStats = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!._id.toString();
   const month = req.query.month as string;
