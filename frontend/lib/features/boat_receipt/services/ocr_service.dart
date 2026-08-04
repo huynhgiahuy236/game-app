@@ -29,11 +29,14 @@ class OcrService {
       String? boatNumber;
       String? weight;
 
-      // Extract Date regex (e.g., 11/07/2025 or 03/07/2025)
-      final dateRegExp = RegExp(r'\b(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/(20\d{2})\b');
+      // Extract Date regex (e.g., 11/07/2025 or 11 / 07 / 2025 or 03/07/2025)
+      final dateRegExp = RegExp(r'\b(0?[1-9]|[12][0-9]|3[01])\s*[\/\.-]\s*(0?[1-9]|1[0-2])\s*[\/\.-]\s*(20\d{2})\b');
       final dateMatch = dateRegExp.firstMatch(fullText);
       if (dateMatch != null) {
-        date = dateMatch.group(0);
+        final d = dateMatch.group(1)!.padLeft(2, '0');
+        final m = dateMatch.group(2)!.padLeft(2, '0');
+        final y = dateMatch.group(3);
+        date = '$d/$m/$y';
       }
 
       // Extract Boat Number regex (e.g., AG 0204 or AG-0204 or AG0204 or BT 1234)
@@ -41,20 +44,20 @@ class OcrService {
       final boatMatches = boatRegExp.allMatches(fullText);
       for (final match in boatMatches) {
         final str = match.group(0)?.toUpperCase();
-        if (str != null && !str.contains('KG') && !str.contains('HG')) {
+        if (str != null && !str.contains('KG') && !str.contains('HG') && !str.startsWith('HD') && !str.startsWith('BM')) {
           boatNumber = str.replaceAll('-', ' ');
           break;
         }
       }
 
       // Extract Weight regex (e.g., 80956 or 80.956)
-      // Standard weight on boat receipts is usually 4-6 digits (e.g. 80956 kg)
-      final weightRegExp = RegExp(r'\b([1-9][0-9]{3,6})\b');
+      // Standard weight on boat receipts is 4 to 6 digits (e.g. 80956 kg)
+      final weightRegExp = RegExp(r'\b([1-9][0-9]{3,5})\b');
       final weightMatches = weightRegExp.allMatches(fullText);
       for (final match in weightMatches) {
         final str = match.group(0);
-        // Avoid matching year like 2024 or 2025
-        if (str != null && str != '2024' && str != '2025' && str != '2026') {
+        // Avoid matching contract/year/doc numbers like 2024, 2025, 2026, 100599
+        if (str != null && str != '2024' && str != '2025' && str != '2026' && str != '2027') {
           weight = str;
           break;
         }

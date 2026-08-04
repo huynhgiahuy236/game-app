@@ -285,17 +285,17 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFF334155)),
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Date Field
-                      const Text(
+                      Text(
                         'Ngày nhập phiếu',
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 8),
                       InkWell(
@@ -304,18 +304,18 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A),
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF475569)),
+                            border: Border.all(color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 AppFormatters.formatDate(_selectedDate),
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                               ),
-                              const Icon(Icons.calendar_today_rounded, size: 28, color: Color(0xFF38BDF8)),
+                              const Icon(Icons.calendar_today_rounded, size: 28, color: Color(0xFF0284C7)),
                             ],
                           ),
                         ),
@@ -323,25 +323,25 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                       const SizedBox(height: 20),
 
                       // Boat Number Field
-                      const Text(
+                      Text(
                         'Số ghe',
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _boatController,
                         textCapitalization: TextCapitalization.characters,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                         decoration: InputDecoration(
                           hintText: 'Ví dụ: AG 0204',
-                          hintStyle: const TextStyle(color: Colors.grey),
-                          prefixIcon: const Icon(Icons.directions_boat_rounded, size: 28, color: Color(0xFF38BDF8)),
+                          hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.directions_boat_rounded, size: 28, color: Color(0xFF0284C7)),
                           filled: true,
-                          fillColor: const Color(0xFF0F172A),
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
                           ),
                         ),
                         onChanged: (val) {
@@ -358,27 +358,27 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                       const SizedBox(height: 20),
 
                       // Weight Field
-                      const Text(
+                      Text(
                         'Khối lượng (kg)',
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _weightController,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
                         decoration: InputDecoration(
                           hintText: 'Ví dụ: 80956',
-                          hintStyle: const TextStyle(color: Colors.grey),
+                          hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                           suffixText: 'kg',
-                          suffixStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                          prefixIcon: const Icon(Icons.scale_rounded, size: 28, color: Color(0xFF38BDF8)),
+                          suffixStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                          prefixIcon: const Icon(Icons.scale_rounded, size: 28, color: Color(0xFF0284C7)),
                           filled: true,
-                          fillColor: const Color(0xFF0F172A),
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
                           ),
                         ),
                         onChanged: (val) {
@@ -399,27 +399,27 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                       const SizedBox(height: 20),
 
                       // Price / Kg Field
-                      const Text(
+                      Text(
                         'Giá lúa (đ/kg)',
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _priceController,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFDE047) : const Color(0xFFD97706)),
                         decoration: InputDecoration(
                           hintText: 'Ví dụ: 7500',
-                          hintStyle: const TextStyle(color: Colors.grey),
+                          hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                           suffixText: 'đ/kg',
-                          suffixStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                          prefixIcon: const Icon(Icons.payments_rounded, size: 28, color: Color(0xFFFDE047)),
+                          suffixStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                          prefixIcon: Icon(Icons.payments_rounded, size: 28, color: isDark ? const Color(0xFFFDE047) : const Color(0xFFD97706)),
                           filled: true,
-                          fillColor: const Color(0xFF0F172A),
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
                           ),
                         ),
                         onChanged: (val) {
