@@ -15,12 +15,16 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow mobile apps, curl, postman (origin undefined) or listed origins
-      if (!origin || env.CORS_ORIGINS.includes(origin) || env.NODE_ENV === 'development') {
-        callback(null, true);
-      } else {
-        callback(new Error('CORS Policy: Access denied'));
-      }
+      // Mobile app / Postman / curl: không có Origin header → luôn cho qua
+      if (!origin) return callback(null, true);
+
+      // Development: cho qua hết để test dễ
+      if (env.NODE_ENV === 'development') return callback(null, true);
+
+      // Production: chỉ cho qua nếu domain nằm trong whitelist
+      if (env.CORS_ORIGINS.includes(origin)) return callback(null, true);
+
+      callback(new Error(`CORS: Origin "${origin}" không được phép`));
     },
     credentials: true,
   })
