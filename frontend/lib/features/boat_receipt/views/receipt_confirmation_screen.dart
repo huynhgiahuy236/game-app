@@ -71,9 +71,11 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
 
   void _onWeightChanged() {
     final val = int.tryParse(_weightController.text.trim()) ?? 0;
-    setState(() {
-      _calculatedKg = val;
-    });
+    if (_calculatedKg != val) {
+      setState(() {
+        _calculatedKg = val;
+      });
+    }
   }
 
   @override
@@ -94,8 +96,12 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
       locale: const Locale('vi', 'VN'),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(primary: Colors.blue.shade800),
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF38BDF8),
+              onPrimary: Color(0xFF0F172A),
+              surface: Color(0xFF1E293B),
+            ),
           ),
           child: child!,
         );
@@ -148,11 +154,11 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
               'Lưu phiếu thành công!',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFF10B981),
             duration: Duration(seconds: 2),
           ),
         );
-        Navigator.pop(context, true); // Return to home & refresh
+        Navigator.pop(context, true);
       }
     } catch (e) {
       setState(() {
@@ -170,15 +176,15 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
         title: const Text(
           'XÁC NHẬN PHIẾU',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.blue.shade900,
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -188,7 +194,7 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Image preview with tap to zoom
+                // Image Preview Banner
                 if (widget.imageFile != null) ...[
                   GestureDetector(
                     onTap: () {
@@ -202,29 +208,29 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                     child: Container(
                       height: 220,
                       decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.blue.shade300, width: 2),
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF0284C7), width: 2),
                       ),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(18),
                             child: kIsWeb
                                 ? const Text('Preview')
                                 : Image.file(widget.imageFile!, fit: BoxFit.cover, width: double.infinity),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
+                              color: Colors.black.withValues(alpha: 0.75),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.zoom_in, color: Colors.white, size: 24),
+                                Icon(Icons.zoom_in_rounded, color: Colors.white, size: 24),
                                 SizedBox(width: 6),
                                 Text(
                                   'Chạm để phóng to ảnh',
@@ -244,179 +250,208 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red, width: 2),
+                      color: const Color(0xFF991B1B).withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF43F5E), width: 2),
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(fontSize: 18, color: Colors.red, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 18, color: Color(0xFFFECDD3), fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 20),
                 ],
 
-                // Receipt Date
-                const Text(
-                  'Ngày nhập',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF222222)),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade400, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          AppFormatters.formatDate(_selectedDate),
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                        ),
-                        Icon(Icons.calendar_today, size: 28, color: Colors.blue.shade800),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Boat Number
-                const Text(
-                  'Số ghe',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF222222)),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _boatController,
-                  textCapitalization: TextCapitalization.characters,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                  decoration: InputDecoration(
-                    hintText: 'Ví dụ: AG 0204',
-                    prefixIcon: const Icon(Icons.directions_boat, size: 28),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
-                    ),
-                  ),
-                  onChanged: (val) {
-                    if (!_editedFields.contains('boatNumber')) _editedFields.add('boatNumber');
-                    _wasEdited = true;
-                  },
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Vui lòng nhập số ghe';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Weight in Kg
-                const Text(
-                  'Khối lượng (kg)',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF222222)),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _weightController,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
-                  decoration: InputDecoration(
-                    hintText: 'Ví dụ: 80956',
-                    suffixText: 'kg',
-                    suffixStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                    prefixIcon: const Icon(Icons.scale, size: 28),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
-                    ),
-                  ),
-                  onChanged: (val) {
-                    if (!_editedFields.contains('weightKg')) _editedFields.add('weightKg');
-                    _wasEdited = true;
-                  },
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Vui lòng nhập khối lượng (kg)';
-                    }
-                    final n = int.tryParse(val.trim());
-                    if (n == null || n <= 0) {
-                      return 'Khối lượng phải là số nguyên lớn hơn 0';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // Converted Tons Display
+                // Form Container Card
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.blue.shade300, width: 2),
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFF334155)),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(Icons.swap_horiz, size: 32, color: Colors.blue.shade900),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Tương đương quy đổi',
-                            style: TextStyle(fontSize: 16, color: Color(0xFF555555)),
+                      // Date Field
+                      const Text(
+                        'Ngày nhập phiếu',
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: _pickDate,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF475569)),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            AppFormatters.formatKgToTons(_calculatedKg),
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade900,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                AppFormatters.formatDate(_selectedDate),
+                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              const Icon(Icons.calendar_today_rounded, size: 28, color: Color(0xFF38BDF8)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Boat Number Field
+                      const Text(
+                        'Số ghe',
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _boatController,
+                        textCapitalization: TextCapitalization.characters,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Ví dụ: AG 0204',
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          prefixIcon: const Icon(Icons.directions_boat_rounded, size: 28, color: Color(0xFF38BDF8)),
+                          filled: true,
+                          fillColor: const Color(0xFF0F172A),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          if (!_editedFields.contains('boatNumber')) _editedFields.add('boatNumber');
+                          _wasEdited = true;
+                        },
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Vui lòng nhập số ghe';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Weight Field
+                      const Text(
+                        'Khối lượng (kg)',
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _weightController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                        decoration: InputDecoration(
+                          hintText: 'Ví dụ: 80956',
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          suffixText: 'kg',
+                          suffixStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                          prefixIcon: const Icon(Icons.scale_rounded, size: 28, color: Color(0xFF38BDF8)),
+                          filled: true,
+                          fillColor: const Color(0xFF0F172A),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          if (!_editedFields.contains('weightKg')) _editedFields.add('weightKg');
+                          _wasEdited = true;
+                        },
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Vui lòng nhập khối lượng (kg)';
+                          }
+                          final n = int.tryParse(val.trim());
+                          if (n == null || n <= 0) {
+                            return 'Khối lượng phải là số nguyên lớn hơn 0';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Converted Tons Display Box
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF065F46), Color(0xFF047857)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF047857).withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.swap_horiz_rounded, size: 36, color: Color(0xFFA7F3D0)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'TƯƠNG ĐƯƠNG QUY ĐỔI',
+                                    style: TextStyle(fontSize: 15, color: Color(0xFFA7F3D0), fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    AppFormatters.formatKgToTons(_calculatedKg),
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Note Field
+                      const Text(
+                        'Ghi chú (Không bắt buộc)',
+                        style: TextStyle(fontSize: 17, color: Color(0xFF94A3B8)),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _noteController,
+                        maxLines: 2,
+                        style: const TextStyle(fontSize: 18, color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Nhập ghi chú thêm nếu có...',
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          filled: true,
+                          fillColor: const Color(0xFF0F172A),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF475569)),
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Optional Note
-                const Text(
-                  'Ghi chú (Không bắt buộc)',
-                  style: TextStyle(fontSize: 18, color: Color(0xFF444444)),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _noteController,
-                  maxLines: 2,
-                  style: const TextStyle(fontSize: 18),
-                  decoration: InputDecoration(
-                    hintText: 'Nhập ghi chú thêm nếu có...',
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.all(16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Colors.grey),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
                 // Action Buttons
                 Row(
@@ -424,44 +459,44 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                     if (widget.imageFile != null) ...[
                       Expanded(
                         child: SizedBox(
-                          height: 58,
+                          height: 60,
                           child: OutlinedButton.icon(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.camera_alt, size: 26),
+                            icon: const Icon(Icons.camera_alt_rounded, size: 26),
                             label: const Text(
                               'Chụp lại',
                               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange.shade900,
-                              side: BorderSide(color: Colors.orange.shade800, width: 2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              foregroundColor: const Color(0xFFF97316),
+                              side: const BorderSide(color: Color(0xFFEA580C), width: 2.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                     ],
                     Expanded(
                       flex: 2,
                       child: SizedBox(
-                        height: 58,
+                        height: 60,
                         child: ElevatedButton.icon(
                           onPressed: _isLoading ? null : _handleSave,
                           icon: _isLoading
                               ? const SizedBox.shrink()
-                              : const Icon(Icons.check_circle, size: 28),
+                              : const Icon(Icons.check_circle_rounded, size: 28),
                           label: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
+                              ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
                               : const Text(
                                   'XÁC NHẬN LƯU',
                                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                                 ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade800,
+                            backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 6,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                           ),
                         ),
                       ),

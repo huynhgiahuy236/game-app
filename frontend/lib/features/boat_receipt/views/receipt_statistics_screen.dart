@@ -68,20 +68,20 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('THỐNG KÊ SỔ GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue.shade900,
+        title: const Text('THỐNG KÊ SỔ GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.amber,
+          indicatorColor: const Color(0xFFFDE047),
           indicatorWeight: 4,
           labelStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           unselectedLabelStyle: const TextStyle(fontSize: 16),
-          labelColor: Colors.amber,
-          unselectedLabelColor: Colors.white70,
+          labelColor: const Color(0xFFFDE047),
+          unselectedLabelColor: const Color(0xFF94A3B8),
           tabs: const [
             Tab(text: 'Theo Ngày'),
             Tab(text: 'Theo Tháng'),
@@ -91,9 +91,9 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
           : _errorMessage != null
-              ? Center(child: Text(_errorMessage!, style: const TextStyle(fontSize: 18, color: Colors.red)))
+              ? Center(child: Text(_errorMessage!, style: const TextStyle(fontSize: 18, color: Color(0xFFF43F5E))))
               : TabBarView(
                   controller: _tabController,
                   children: [
@@ -125,13 +125,17 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             totalKg: totalKg,
             totalTons: totalTons,
             avgTons: avgTons,
-            color: Colors.blue.shade900,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E293B), Color(0xFF0284C7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           const SizedBox(height: 24),
-          const Text('PHÂN BỔ THEO GHE TRONG NGÀY', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text('PHÂN BỔ THEO GHE TRONG NGÀY', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 12),
           if (byBoat.isEmpty)
-            const Text('Hôm nay chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Colors.grey))
+            const Text('Hôm nay chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
           else
             ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
         ],
@@ -146,7 +150,6 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
     final totalTons = _monthlyData!['totalTons'] ?? 0.0;
     final avgTons = _monthlyData!['avgTonsPerTrip'] ?? 0.0;
     final highestDay = _monthlyData!['highestDay'];
-    final dailyTotals = List.from(_monthlyData!['dailyTotals'] ?? []);
     final byBoat = List.from(_monthlyData!['byBoat'] ?? []);
 
     return SingleChildScrollView(
@@ -160,31 +163,35 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             totalKg: totalKg,
             totalTons: totalTons,
             avgTons: avgTons,
-            color: Colors.green.shade800,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF065F46), Color(0xFF0D9488)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           const SizedBox(height: 20),
 
           if (highestDay != null) ...[
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.amber.shade700, width: 2),
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFEAB308), width: 2),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.star, size: 36, color: Colors.amber.shade900),
+                  const Icon(Icons.star_rounded, size: 38, color: Color(0xFFFDE047)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Ngày nhập nhiều lúa nhất', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                        const Text('Ngày nhập nhiều lúa nhất', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8))),
                         const SizedBox(height: 2),
                         Text(
                           '${highestDay['date']} · ${AppFormatters.formatKgToTons(highestDay['totalKg'])} (${highestDay['trips']} chuyến)',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
                         ),
                       ],
                     ),
@@ -195,10 +202,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             const SizedBox(height: 24),
           ],
 
-          const Text('TỔNG THEO TỪNG GHE TRONG THÁNG', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text('TỔNG THEO TỪNG GHE TRONG THÁNG', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 12),
           if (byBoat.isEmpty)
-            const Text('Tháng này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Colors.grey))
+            const Text('Tháng này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
           else
             ...byBoat.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
         ],
@@ -225,31 +232,35 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             totalKg: totalKg,
             totalTons: totalTons,
             avgTons: null,
-            color: Colors.purple.shade800,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF581C87), Color(0xFF7C3AED)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           const SizedBox(height: 20),
 
           if (highestMonth != null) ...[
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.purple.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.purple.shade400, width: 2),
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFA855F7), width: 2),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.stars, size: 36, color: Colors.purple.shade900),
+                  const Icon(Icons.stars_rounded, size: 38, color: Color(0xFFC084FC)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Tháng đạt khối lượng cao nhất', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                        const Text('Tháng đạt khối lượng cao nhất', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8))),
                         const SizedBox(height: 2),
                         Text(
                           'Tháng ${highestMonth['month']} · ${AppFormatters.formatKgToTons(highestMonth['totalKg'])}',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple.shade900),
+                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFFE9D5FF)),
                         ),
                       ],
                     ),
@@ -260,10 +271,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
             const SizedBox(height: 24),
           ],
 
-          const Text('TỔNG THEO TỪNG THÁNG', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text('TỔNG THEO TỪNG THÁNG', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 12),
           if (monthlyTotals.isEmpty)
-            const Text('Năm này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Colors.grey))
+            const Text('Năm này chưa có chuyến ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
           else
             ...monthlyTotals.map((m) => _buildBoatStatTile('Tháng ${m['month']}', m['trips'], m['totalKg'])),
         ],
@@ -279,10 +290,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('TỔNG KHỐI LƯỢNG THEO SỐ GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const Text('TỔNG KHỐI LƯỢNG THEO SỐ GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 16),
           if (_byBoatData!.isEmpty)
-            const Text('Chưa có dữ liệu ghe nào', style: TextStyle(fontSize: 18, color: Colors.grey))
+            const Text('Chưa có dữ liệu ghe nào', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)))
           else
             ..._byBoatData!.map((b) => _buildBoatStatTile(b['boatNumber'], b['trips'], b['totalKg'])),
         ],
@@ -296,86 +307,101 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> with 
     required int totalKg,
     required double totalTons,
     required double? avgTons,
-    required Color color,
+    required Gradient gradient,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.amber),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    const Text('Tổng chuyến', style: TextStyle(fontSize: 16, color: Colors.white70)),
-                    const SizedBox(height: 4),
-                    Text('$trips chuyến', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ],
-                ),
-                Container(width: 1, height: 50, color: Colors.white30),
-                Column(
-                  children: [
-                    const Text('Tổng khối lượng', style: TextStyle(fontSize: 16, color: Colors.white70)),
-                    const SizedBox(height: 4),
-                    Text(
-                      AppFormatters.formatKgToTons(totalKg),
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (avgTons != null) ...[
-              const Divider(color: Colors.white30, height: 24),
-              Text(
-                'Trung bình: ${avgTons.toStringAsFixed(3)} tấn / chuyến',
-                style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w500),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  const Text('Tổng chuyến', style: TextStyle(fontSize: 16, color: Color(0xFFE2E8F0))),
+                  const SizedBox(height: 4),
+                  Text('$trips chuyến', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
+              ),
+              Container(width: 1.5, height: 50, color: Colors.white30),
+              Column(
+                children: [
+                  const Text('Tổng khối lượng', style: TextStyle(fontSize: 16, color: Color(0xFFE2E8F0))),
+                  const SizedBox(height: 4),
+                  Text(
+                    AppFormatters.formatKgToTons(totalKg),
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
               ),
             ],
+          ),
+          if (avgTons != null) ...[
+            const Divider(color: Colors.white30, height: 28),
+            Text(
+              'Trung bình: ${avgTons.toStringAsFixed(3)} tấn / chuyến',
+              style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildBoatStatTile(String label, int trips, int totalKg) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.directions_boat, color: Colors.blue.shade900, size: 28),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    Text('$trips chuyến nhập', style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                  ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            Text(
-              AppFormatters.formatKgToTons(totalKg),
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
-            ),
-          ],
-        ),
+                child: const Icon(Icons.directions_boat_filled_rounded, color: Color(0xFF38BDF8), size: 28),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 2),
+                  Text('$trips chuyến nhập', style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8))),
+                ],
+              ),
+            ],
+          ),
+          Text(
+            AppFormatters.formatKgToTons(totalKg),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+          ),
+        ],
       ),
     );
   }

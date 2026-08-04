@@ -1,17 +1,22 @@
-# gameapp
+# Frontend Ứng Dụng Di Động Chị Mười (Flutter)
 
-A new Flutter project.
+Ứng dụng di động Flutter thiết kế giao diện chữ lớn (18sp-28sp), tương phản cao, nút bấm to (52-60px) dành riêng cho người lớn tuổi.
 
-## Getting Started
+## Các module chính
+1. **Đăng nhập & Phục hồi phiên**: Sử dụng `flutter_secure_storage` lưu JWT token. Tự động phục hồi phiên làm việc khi mở ứng dụng.
+2. **Trang chủ chọn module**:
+   - `Trò chơi`: Bảo tồn 100% các game sẵn có (Caro, 2048, Sudoku, Đổ mìn, Cờ tỷ phú, Block Puzzle).
+   - `Sổ ghe`: Quản lý phiếu nhập lúa, chụp ảnh OCR trợ lý, quy đổi kg ra tấn.
+3. **Thống kê & Lịch sử**: Xem biểu đồ số liệu dạng con số lớn dễ nhìn theo Ngày, Tháng, Năm, Số ghe.
 
-This project is a starting point for a Flutter application.
+## Chạy ứng dụng
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Chạy kiểm thử
+```bash
+flutter analyze
+flutter test
+```

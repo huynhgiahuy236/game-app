@@ -38,8 +38,6 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
       });
 
       final File imageFile = File(pickedFile.path);
-
-      // Run OCR helper
       final OcrResult ocrResult = await _ocrService.processImage(imageFile);
 
       if (!mounted) return;
@@ -69,8 +67,8 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Không thể chọn hoặc xử lý ảnh: $e', style: const TextStyle(fontSize: 16)),
-            backgroundColor: Colors.red,
+            content: Text('Không thể xử lý ảnh: $e', style: const TextStyle(fontSize: 18)),
+            backgroundColor: const Color(0xFFDC2626),
           ),
         );
       }
@@ -95,31 +93,31 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
         title: const Text(
           'NHẬP PHIẾU GHE MỚI',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.blue.shade900,
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 0,
       ),
       body: _isProcessing
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(strokeWidth: 4),
+                  const CircularProgressIndicator(color: Color(0xFF38BDF8), strokeWidth: 4),
                   const SizedBox(height: 24),
-                  Text(
+                  const Text(
                     'Đang đọc chữ trên phiếu...',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Vui lòng chờ trong giây lát',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)),
                   ),
                 ],
               ),
@@ -130,152 +128,114 @@ class _AddBoatReceiptScreenState extends State<AddBoatReceiptScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     const Text(
                       'VUI LÒNG CHỌN PHƯƠNG THỨC',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF333333),
+                        color: Colors.white,
+                        letterSpacing: 0.8,
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // Camera option (Large card button)
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      child: InkWell(
-                        onTap: () => _pickImage(ImageSource.camera),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade100,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.camera_alt, size: 40, color: Colors.blue.shade900),
-                              ),
-                              const SizedBox(width: 20),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Chụp ảnh trực tiếp',
-                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Dùng máy ảnh chụp phiếu nhập',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.arrow_forward_ios, color: Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // Camera option card
+                    _buildOptionCard(
+                      title: 'Chụp ảnh trực tiếp',
+                      subtitle: 'Dùng máy ảnh chụp phiếu & tự nhận diện chữ',
+                      icon: Icons.camera_alt_rounded,
+                      color: const Color(0xFF0284C7),
+                      onTap: () => _pickImage(ImageSource.camera),
                     ),
                     const SizedBox(height: 20),
 
-                    // Gallery option
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      child: InkWell(
-                        onTap: () => _pickImage(ImageSource.gallery),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.photo_library, size: 40, color: Colors.green.shade900),
-                              ),
-                              const SizedBox(width: 20),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Chọn từ thư viện',
-                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Lấy ảnh phiếu có sẵn trong máy',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.arrow_forward_ios, color: Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // Gallery option card
+                    _buildOptionCard(
+                      title: 'Chọn từ thư viện',
+                      subtitle: 'Lấy ảnh phiếu có sẵn trong điện thoại',
+                      icon: Icons.photo_library_rounded,
+                      color: const Color(0xFF0D9488),
+                      onTap: () => _pickImage(ImageSource.gallery),
                     ),
                     const SizedBox(height: 20),
 
-                    // Manual entry option
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      child: InkWell(
-                        onTap: _manualEntry,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade100,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.edit_document, size: 40, color: Colors.orange.shade900),
-                              ),
-                              const SizedBox(width: 20),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Nhập thủ công',
-                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Tự gõ số ghe và số ký không cần ảnh',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.arrow_forward_ios, color: Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // Manual entry option card
+                    _buildOptionCard(
+                      title: 'Nhập thủ công',
+                      subtitle: 'Tự gõ số ghe và số kg trực tiếp',
+                      icon: Icons.edit_note_rounded,
+                      color: const Color(0xFFD97706),
+                      onTap: _manualEntry,
                     ),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildOptionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.15),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 40, color: color),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF64748B), size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

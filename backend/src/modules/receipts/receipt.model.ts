@@ -149,7 +149,7 @@ const boatReceiptSchema = new Schema<IBoatReceipt>(
 );
 
 // Indexes
-boatReceiptSchema.index({ userId: 1, receiptDate: -1 });
+boatReceiptSchema.index({ userId: 1, deletedAt: 1, receiptDate: -1 });
 boatReceiptSchema.index({ userId: 1, boatNumber: 1 });
 boatReceiptSchema.index({ userId: 1, boatNumber: 1, receiptDate: -1 });
 boatReceiptSchema.index({ userId: 1, clientId: 1 }, { unique: true });

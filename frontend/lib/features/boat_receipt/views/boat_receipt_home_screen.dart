@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/formatters.dart';
+import '../../auth/services/auth_repository.dart';
+import '../../settings/views/app_settings_screen.dart';
 import '../models/boat_receipt_model.dart';
 import '../models/statistics_model.dart';
 import '../services/boat_receipt_repository.dart';
@@ -10,7 +12,14 @@ import 'receipt_detail_screen.dart';
 import 'receipt_statistics_screen.dart';
 
 class BoatReceiptHomeScreen extends StatefulWidget {
-  const BoatReceiptHomeScreen({super.key});
+  final Function(ThemeMode)? onThemeChanged;
+  final AuthRepository? authRepository;
+
+  const BoatReceiptHomeScreen({
+    super.key,
+    this.onThemeChanged,
+    this.authRepository,
+  });
 
   @override
   State<BoatReceiptHomeScreen> createState() => _BoatReceiptHomeScreenState();
@@ -18,6 +27,7 @@ class BoatReceiptHomeScreen extends StatefulWidget {
 
 class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
   final BoatReceiptRepository _repository = BoatReceiptRepository();
+  int _currentNavIndex = 0;
 
   HomeSummaryModel? _summary;
   List<BoatReceiptModel> _recentReceipts = [];
@@ -57,46 +67,98 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      _buildHomeContent(),
+      const ReceiptHistoryScreen(),
+      const ReceiptStatisticsScreen(),
+      AppSettingsScreen(
+        currentModule: 'boat_receipts',
+        onThemeChanged: widget.onThemeChanged ?? (_) {},
+        authRepository: widget.authRepository,
+      ),
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: IndexedStack(
+        index: _currentNavIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 72,
+          backgroundColor: const Color(0xFF1E293B),
+          indicatorColor: const Color(0xFF0284C7),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => TextStyle(
+              fontSize: 15,
+              fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.w500,
+              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              size: 26,
+              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+            ),
+          ),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentNavIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _currentNavIndex = index;
+            });
+            if (index == 0) _loadData();
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.directions_boat_filled_rounded),
+              selectedIcon: Icon(Icons.directions_boat_filled_rounded, color: Colors.white),
+              label: 'Trang chủ Sổ',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.history_rounded),
+              selectedIcon: Icon(Icons.history_rounded, color: Colors.white),
+              label: 'Phiếu',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_rounded),
+              selectedIcon: Icon(Icons.bar_chart_rounded, color: Colors.white),
+              label: 'Thống kê',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_rounded),
+              selectedIcon: Icon(Icons.settings_rounded, color: Colors.white),
+              label: 'Cài đặt',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeContent() {
     final now = DateTime.now();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('SỔ GHE NHẬP LÚA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue.shade900,
+        title: const Text(
+          'SỔ GHE NHẬP LÚA',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        elevation: 3,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart, size: 30),
-            tooltip: 'Thống kê',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReceiptStatisticsScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.history, size: 30),
-            tooltip: 'Lịch sử',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReceiptHistoryScreen()),
-              );
-              _loadData();
-            },
-          ),
-        ],
+        elevation: 0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
           : RefreshIndicator(
               onRefresh: _loadData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -104,19 +166,19 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red, width: 2),
+                          color: const Color(0xFF991B1B).withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFF43F5E)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline, color: Colors.red, size: 28),
+                            const Icon(Icons.error_outline_rounded, color: Color(0xFFF43F5E), size: 28),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(_errorMessage!, style: const TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold)),
+                              child: Text(_errorMessage!, style: const TextStyle(fontSize: 16, color: Color(0xFFFECDD3), fontWeight: FontWeight.bold)),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.refresh, color: Colors.red),
+                              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
                               onPressed: _loadData,
                             ),
                           ],
@@ -125,7 +187,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                       const SizedBox(height: 20),
                     ],
 
-                    // Summary Stats Cards
+                    // Summary Stats Cards Row
                     Row(
                       children: [
                         // Today Stats Card
@@ -133,70 +195,100 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade900,
-                              borderRadius: BorderRadius.circular(18),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF1E293B), Color(0xFF0369A1)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.blue.shade900.withOpacity(0.3),
-                                  blurRadius: 8,
+                                  color: const Color(0xFF0369A1).withValues(alpha: 0.3),
+                                  blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
+                              border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
                                   'HÔM NAY',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${_summary?.today.trips ?? 0} chuyến',
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                const SizedBox(height: 6),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '${_summary?.today.trips ?? 0} chuyến',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppFormatters.formatKgToTons(_summary?.today.weightKg ?? 0),
-                                  style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w500),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    AppFormatters.formatKgToTons(_summary?.today.weightKg ?? 0),
+                                    style: const TextStyle(fontSize: 18, color: Color(0xFFE2E8F0), fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
 
                         // Month Stats Card
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.all(18),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.teal.shade800,
-                              borderRadius: BorderRadius.circular(18),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF065F46), Color(0xFF0D9488)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.teal.shade800.withOpacity(0.3),
-                                  blurRadius: 8,
+                                  color: const Color(0xFF0D9488).withValues(alpha: 0.3),
+                                  blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
+                              border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.3)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'THÁNG ${AppFormatters.formatMonthYear(now)}',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'THÁNG ${AppFormatters.formatMonthYear(now)}',
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
+                                  ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${_summary?.month.trips ?? 0} chuyến',
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                const SizedBox(height: 6),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '${_summary?.month.trips ?? 0} chuyến',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppFormatters.formatKgToTons(_summary?.month.weightKg ?? 0),
-                                  style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w500),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    AppFormatters.formatKgToTons(_summary?.month.weightKg ?? 0),
+                                    style: const TextStyle(fontSize: 18, color: Color(0xFFE2E8F0), fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ],
                             ),
@@ -204,9 +296,9 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
-                    // Primary Action Button: + CHỤP PHIẾU (Height 60px min, large text)
+                    // Primary Action Button: + CHỤP PHIẾU MỚI (Height 64px)
                     SizedBox(
                       height: 64,
                       child: ElevatedButton.icon(
@@ -217,20 +309,20 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                           );
                           if (saved == true) _loadData();
                         },
-                        icon: const Icon(Icons.add_a_photo, size: 32),
+                        icon: const Icon(Icons.add_a_photo_rounded, size: 30),
                         label: const Text(
                           '＋ CHỤP PHIẾU MỚI',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                          style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, letterSpacing: 1.1),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade900,
+                          backgroundColor: const Color(0xFF0284C7),
                           foregroundColor: Colors.white,
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 6,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Secondary Action Button: ✍ NHẬP THỦ CÔNG
                     SizedBox(
@@ -246,103 +338,32 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         icon: const Icon(Icons.edit_document, size: 28),
                         label: const Text(
                           '✍ NHẬP THỦ CÔNG',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.blue.shade900,
-                          side: BorderSide(color: Colors.blue.shade900, width: 2.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          foregroundColor: const Color(0xFF38BDF8),
+                          side: const BorderSide(color: Color(0xFF0284C7), width: 2.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
-                    // Navigation buttons row (Lịch sử & Thống kê)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const ReceiptHistoryScreen()),
-                              );
-                              _loadData();
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.history, color: Colors.blue.shade900, size: 28),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Lịch sử',
-                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const ReceiptStatisticsScreen()),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.bar_chart, color: Colors.teal.shade800, size: 28),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Thống kê',
-                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Section: Recent Receipts
+                    // Recent Receipts Section Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           'PHIẾU GẦN ĐÂY',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
                         ),
                         TextButton(
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ReceiptHistoryScreen()),
-                            );
-                            _loadData();
+                          onPressed: () {
+                            setState(() {
+                              _currentNavIndex = 1;
+                            });
                           },
-                          child: const Text('Xem tất cả', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          child: const Text('Xem tất cả', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
                         ),
                       ],
                     ),
@@ -350,16 +371,17 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
 
                     if (_recentReceipts.isEmpty)
                       Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(28),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF334155)),
                         ),
                         child: const Center(
                           child: Text(
                             'Chưa có phiếu nhập lúa nào.\nBấm "CHỤP PHIẾU MỚI" để bắt đầu.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                            style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8), height: 1.5),
                           ),
                         ),
                       )
@@ -368,50 +390,56 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _recentReceipts.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => const SizedBox(height: 14),
                         itemBuilder: (context, index) {
                           final item = _recentReceipts[index];
-                          return Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                              leading: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.directions_boat, color: Colors.blue.shade900, size: 28),
-                              ),
-                              title: Row(
-                                children: [
-                                  Text(
-                                    AppFormatters.formatDate(item.receiptDate),
-                                    style: const TextStyle(fontSize: 16, color: Color(0xFF555555)),
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFF334155)),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                leading: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
-                                  const Text(' · ', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                                  Text(
-                                    item.boatNumber,
-                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                  AppFormatters.formatKgToTons(item.weightKg),
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                                  child: const Icon(Icons.directions_boat_filled_rounded, color: Color(0xFF38BDF8), size: 30),
                                 ),
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      AppFormatters.formatDate(item.receiptDate),
+                                      style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
+                                    ),
+                                    const Text(' · ', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                                    Text(
+                                      item.boatNumber,
+                                      style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 6.0),
+                                  child: Text(
+                                    AppFormatters.formatKgToTons(item.weightKg),
+                                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 20, color: Color(0xFF64748B)),
+                                onTap: () async {
+                                  final updated = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => ReceiptDetailScreen(receiptId: item.id)),
+                                  );
+                                  if (updated == true) _loadData();
+                                },
                               ),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 20, color: Colors.grey),
-                              onTap: () async {
-                                final updated = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => ReceiptDetailScreen(receiptId: item.id)),
-                                );
-                                if (updated == true) _loadData();
-                              },
                             ),
                           );
                         },

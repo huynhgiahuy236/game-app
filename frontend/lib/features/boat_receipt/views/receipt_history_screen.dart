@@ -3,7 +3,6 @@ import '../../../core/utils/formatters.dart';
 import '../models/boat_receipt_model.dart';
 import '../services/boat_receipt_repository.dart';
 import 'receipt_detail_screen.dart';
-import 'edit_receipt_screen.dart';
 
 class ReceiptHistoryScreen extends StatefulWidget {
   const ReceiptHistoryScreen({super.key});
@@ -20,7 +19,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  String _filterType = 'all'; // 'all', 'today', 'week', 'month'
+  String _filterType = 'all';
 
   @override
   void initState() {
@@ -86,48 +85,49 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('LỊCH SỬ PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue.shade900,
+        title: const Text('LỊCH SỬ PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 0,
       ),
       body: Column(
         children: [
-          // Filter & Search bar
+          // Filter & Search Header Card
           Container(
-            color: Colors.white,
+            color: const Color(0xFF1E293B),
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Search Input
+                // Search Input Field
                 TextField(
                   controller: _searchController,
-                  style: const TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Tìm theo số ghe (ví dụ: AG 0204)...',
-                    prefixIcon: const Icon(Icons.search, size: 28),
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 28, color: Color(0xFF38BDF8)),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.clear_rounded, color: Colors.grey),
                       onPressed: () {
                         _searchController.clear();
                         _fetchHistory();
                       },
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade100,
+                    fillColor: const Color(0xFF0F172A),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFF334155)),
                     ),
                   ),
                   onSubmitted: (_) => _fetchHistory(),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // Filter Buttons Row
+                // Filter Chips Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -146,15 +146,15 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
             ),
           ),
 
-          // List content
+          // Receipts List Content
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
                 : _errorMessage != null
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
-                          child: Text(_errorMessage!, style: const TextStyle(fontSize: 18, color: Colors.red)),
+                          child: Text(_errorMessage!, style: const TextStyle(fontSize: 18, color: Color(0xFFF43F5E))),
                         ),
                       )
                     : _receipts.isEmpty
@@ -162,11 +162,11 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.receipt_long, size: 64, color: Colors.grey),
+                                Icon(Icons.receipt_long_rounded, size: 64, color: Color(0xFF64748B)),
                                 SizedBox(height: 16),
                                 Text(
-                                  'Chưa có phiếu nhập nào',
-                                  style: TextStyle(fontSize: 22, color: Colors.grey, fontWeight: FontWeight.bold),
+                                  'Chưa tìm thấy phiếu nhập nào',
+                                  style: TextStyle(fontSize: 22, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -176,78 +176,84 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                             child: ListView.separated(
                               padding: const EdgeInsets.all(16),
                               itemCount: _receipts.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 14),
+                              separatorBuilder: (_, _) => const SizedBox(height: 14),
                               itemBuilder: (context, index) {
                                 final receipt = _receipts[index];
-                                return Card(
-                                  elevation: 3,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  child: InkWell(
-                                    onTap: () async {
-                                      final updated = await Navigator.push<bool>(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
-                                        ),
-                                      );
-                                      if (updated == true) _fetchHistory();
-                                    },
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(18),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 60,
-                                            height: 60,
-                                            decoration: BoxDecoration(
-                                              color: Colors.blue.shade50,
-                                              borderRadius: BorderRadius.circular(14),
-                                            ),
-                                            child: Icon(Icons.directions_boat, size: 36, color: Colors.blue.shade900),
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: const Color(0xFF334155)),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final updated = await Navigator.push<bool>(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
                                           ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      receipt.boatNumber,
-                                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+                                        );
+                                        if (updated == true) _fetchHistory();
+                                      },
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(18),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 60,
+                                              height: 60,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                              child: const Icon(Icons.directions_boat_filled_rounded, size: 34, color: Color(0xFF38BDF8)),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        receipt.boatNumber,
+                                                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                                      ),
+                                                      Text(
+                                                        AppFormatters.formatDate(receipt.receiptDate),
+                                                        style: const TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    AppFormatters.formatKgToTons(receipt.weightKg),
+                                                    style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Color(0xFF38BDF8),
                                                     ),
+                                                  ),
+                                                  if (receipt.note.isNotEmpty) ...[
+                                                    const SizedBox(height: 4),
                                                     Text(
-                                                      AppFormatters.formatDate(receipt.receiptDate),
-                                                      style: const TextStyle(fontSize: 16, color: Color(0xFF666666)),
+                                                      'Ghi chú: ${receipt.note}',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: const TextStyle(fontSize: 15, color: Color(0xFF64748B)),
                                                     ),
                                                   ],
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  AppFormatters.formatKgToTons(receipt.weightKg),
-                                                  style: TextStyle(
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.blue.shade900,
-                                                  ),
-                                                ),
-                                                if (receipt.note.isNotEmpty) ...[
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Ghi chú: ${receipt.note}',
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(fontSize: 15, color: Colors.grey),
-                                                  ),
                                                 ],
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 20),
-                                        ],
+                                            const SizedBox(width: 12),
+                                            const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF64748B), size: 20),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -267,15 +273,15 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
       label: Text(
         label,
         style: TextStyle(
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? Colors.white : Colors.black87,
+          color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
         ),
       ),
       selected: isSelected,
-      selectedColor: Colors.blue.shade800,
-      backgroundColor: Colors.grey.shade200,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      selectedColor: const Color(0xFF0284C7),
+      backgroundColor: const Color(0xFF0F172A),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       onSelected: (selected) {
         if (selected) {
           setState(() {

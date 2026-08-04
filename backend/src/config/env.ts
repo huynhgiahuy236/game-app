@@ -26,7 +26,7 @@ export const env = {
   MAX_UPLOAD_SIZE_MB: parseInt(process.env.MAX_UPLOAD_SIZE_MB || '10', 10),
   ALLOWED_IMAGE_TYPES: (process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp').split(','),
 
-  SEED_USER_USERNAME: process.env.SEED_USER_USERNAME || 'me',
-  SEED_USER_PASSWORD: process.env.SEED_USER_PASSWORD || 'chi_muoi_123',
+  SEED_USER_USERNAME: process.env.SEED_USER_USERNAME || 'admin',
+  SEED_USER_PASSWORD: process.env.SEED_USER_PASSWORD || 'chimuoi@123',
   SEED_USER_DISPLAY_NAME: process.env.SEED_USER_DISPLAY_NAME || 'Mẹ',
 };

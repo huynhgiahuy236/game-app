@@ -15,6 +15,8 @@ import '../../monopoly/services/monopoly_repository.dart';
 import '../../monopoly/views/monopoly_game_screen.dart';
 import '../../block_puzzle/services/block_puzzle_repository.dart';
 import '../../block_puzzle/views/block_puzzle_screen.dart';
+import '../../auth/services/auth_repository.dart';
+import '../../settings/views/app_settings_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  HubScreen — root nav (3 tabs)
@@ -30,6 +32,7 @@ class HubScreen extends StatefulWidget {
     required this.monopolyRepository,
     required this.blockPuzzleRepository,
     required this.onThemeChanged,
+    this.authRepository,
   });
   final SudokuRepository repository;
   final Game2048Repository game2048Repository;
@@ -38,6 +41,7 @@ class HubScreen extends StatefulWidget {
   final MonopolyRepository monopolyRepository;
   final BlockPuzzleRepository blockPuzzleRepository;
   final ValueChanged<ThemeMode> onThemeChanged;
+  final AuthRepository? authRepository;
 
   @override
   State<HubScreen> createState() => _HubScreenState();
@@ -203,9 +207,10 @@ class _HubScreenState extends State<HubScreen>
         best2048: best2048,
         scoreHistory: scoreHistory2048,
       ),
-      _SettingsTab(
+      AppSettingsScreen(
+        currentModule: 'games',
         onThemeChanged: widget.onThemeChanged,
-        onShowTutorial: _showTutorial,
+        authRepository: widget.authRepository,
       ),
     ];
 

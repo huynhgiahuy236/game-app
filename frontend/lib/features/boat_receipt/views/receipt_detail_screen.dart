@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/boat_receipt_model.dart';
 import '../services/boat_receipt_repository.dart';
-import 'receipt_image_viewer_screen.dart';
 import 'edit_receipt_screen.dart';
+import 'receipt_image_viewer_screen.dart';
 
 class ReceiptDetailScreen extends StatefulWidget {
   final String receiptId;
@@ -16,6 +17,7 @@ class ReceiptDetailScreen extends StatefulWidget {
 
 class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
   final BoatReceiptRepository _repository = BoatReceiptRepository();
+
   BoatReceiptModel? _receipt;
   bool _isLoading = true;
   String? _errorMessage;
@@ -23,10 +25,10 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDetail();
+    _loadReceipt();
   }
 
-  Future<void> _loadDetail() async {
+  Future<void> _loadReceipt() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -48,24 +50,25 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
     }
   }
 
-  Future<void> _handleDelete() async {
+  Future<void> _deleteReceipt() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xác nhận xóa', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Xóa phiếu này?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
         content: const Text(
-          'Bạn có chắc chắn muốn xóa phiếu nhập này không?',
-          style: TextStyle(fontSize: 18),
+          'Bạn có chắc chắn muốn xóa phiếu nhập lúa này không? Thao tác này không thể hoàn tác.',
+          style: TextStyle(fontSize: 18, color: Color(0xFFCBD5E1)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy', style: TextStyle(fontSize: 18)),
+            child: const Text('Hủy', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Xóa phiếu', style: TextStyle(fontSize: 18, color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Xóa', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -76,14 +79,17 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         await _repository.deleteReceipt(widget.receiptId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã xóa phiếu thành công'), backgroundColor: Colors.orange),
+            const SnackBar(
+              content: Text('Đã xóa phiếu thành công', style: TextStyle(fontSize: 18)),
+              backgroundColor: Color(0xFFDC2626),
+            ),
           );
           Navigator.pop(context, true);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Không thể xóa phiếu: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Lỗi xóa phiếu: $e', style: const TextStyle(fontSize: 18))),
           );
         }
       }
@@ -93,215 +99,173 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('CHI TIẾT PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue.shade900,
+        title: const Text('CHI TIẾT PHIẾU GHE', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 0,
         actions: [
           if (_receipt != null) ...[
             IconButton(
-              icon: const Icon(Icons.edit, size: 28),
-              tooltip: 'Chỉnh sửa',
+              icon: const Icon(Icons.edit_rounded, size: 28, color: Color(0xFF38BDF8)),
               onPressed: () async {
                 final updated = await Navigator.push<bool>(
                   context,
-                  MaterialPageRoute(builder: (_) => EditReceiptScreen(receipt: _receipt!)),
+                  MaterialPageRoute(
+                    builder: (_) => EditReceiptScreen(receipt: _receipt!),
+                  ),
                 );
-                if (updated == true) {
-                  _loadDetail();
-                }
+                if (updated == true) _loadReceipt();
               },
             ),
             IconButton(
-              icon: const Icon(Icons.delete_forever, size: 28),
-              tooltip: 'Xóa phiếu',
-              onPressed: _handleDelete,
+              icon: const Icon(Icons.delete_forever_rounded, size: 28, color: Color(0xFFF43F5E)),
+              onPressed: _deleteReceipt,
             ),
+            const SizedBox(width: 8),
           ],
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
           : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(_errorMessage!, style: const TextStyle(fontSize: 20, color: Colors.red)),
-                  ),
-                )
+              ? Center(child: Text(_errorMessage!, style: const TextStyle(fontSize: 18, color: Color(0xFFF43F5E))))
               : _receipt == null
-                  ? const Center(child: Text('Không tìm thấy phiếu', style: TextStyle(fontSize: 20)))
-                  : SafeArea(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Image display
-                            if (_receipt!.image != null && _receipt!.image!.secureUrl.isNotEmpty) ...[
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ReceiptImageViewerScreen(
-                                        imageUrl: _receipt!.image!.secureUrl,
+                  ? const Center(child: Text('Không tìm thấy phiếu', style: TextStyle(fontSize: 18, color: Colors.white)))
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Photo Banner Preview Card
+                          if (_receipt!.image != null && _receipt!.image!.secureUrl.isNotEmpty) ...[
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ReceiptImageViewerScreen(imageUrl: _receipt!.image!.secureUrl),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                height: 260,
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(22),
+                                  border: Border.all(color: const Color(0xFF0284C7), width: 2),
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: kIsWeb
+                                          ? Image.network(_receipt!.image!.secureUrl, fit: BoxFit.cover, width: double.infinity)
+                                          : Image.network(_receipt!.image!.secureUrl, fit: BoxFit.cover, width: double.infinity),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.75),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.zoom_in_rounded, color: Colors.white, size: 26),
+                                          SizedBox(width: 8),
+                                          Text('Xem toàn màn hình', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                                        ],
                                       ),
                                     ),
-                                  );
-                                },
-                                child: Container(
-                                  height: 240,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.blue.shade300, width: 2),
-                                    color: Colors.black,
-                                  ),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(14),
-                                        child: Image.network(
-                                          _receipt!.image!.secureUrl,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.7),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.zoom_in, color: Colors.white, size: 24),
-                                            SizedBox(width: 6),
-                                            Text('Nhấn để phóng to ảnh', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                            ],
-
-                            // Card Info Details
-                            Card(
-                              elevation: 3,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  children: [
-                                    _buildDetailRow('Ngày nhập phiếu', AppFormatters.formatDate(_receipt!.receiptDate), Icons.calendar_today, Colors.blue.shade900),
-                                    const Divider(height: 24),
-                                    _buildDetailRow('Số ghe', _receipt!.boatNumber, Icons.directions_boat, Colors.blue.shade900),
-                                    const Divider(height: 24),
-                                    _buildDetailRow('Khối lượng', AppFormatters.formatKg(_receipt!.weightKg), Icons.scale, Colors.green.shade800),
-                                    const Divider(height: 24),
-                                    _buildDetailRow('Quy đổi', AppFormatters.formatKgToTons(_receipt!.weightKg), Icons.swap_horiz, Colors.orange.shade900),
-                                    if (_receipt!.note.isNotEmpty) ...[
-                                      const Divider(height: 24),
-                                      _buildDetailRow('Ghi chú', _receipt!.note, Icons.note, Colors.grey.shade800),
-                                    ],
                                   ],
                                 ),
                               ),
                             ),
                             const SizedBox(height: 20),
+                          ],
 
-                            // Metadata Card
-                            Card(
-                              elevation: 1,
-                              color: Colors.grey.shade100,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                          // Summary Hero Card
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF1E293B), Color(0xFF0369A1)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Phương thức nhập: ${_receipt!.inputMethod == 'camera' ? 'Chụp ảnh' : _receipt!.inputMethod == 'gallery' ? 'Thư viện' : 'Nhập thủ công'}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                                    const SizedBox(height: 4),
-                                    Text('Thời gian tạo: ${AppFormatters.formatDateTime(_receipt!.createdAt)}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                                    if (_receipt!.wasEdited) ...[
-                                      const SizedBox(height: 4),
-                                      const Text('Trạng thái: Đã qua chỉnh sửa', style: TextStyle(fontSize: 16, color: Colors.orange, fontWeight: FontWeight.bold)),
-                                    ],
+                                    const Text('SỐ GHE', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF059669),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Text('ĐÃ XÁC NHẬN', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
+                                    ),
                                   ],
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Edit & Delete Buttons
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 56,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final updated = await Navigator.push<bool>(
-                                          context,
-                                          MaterialPageRoute(builder: (_) => EditReceiptScreen(receipt: _receipt!)),
-                                        );
-                                        if (updated == true) _loadDetail();
-                                      },
-                                      icon: const Icon(Icons.edit, size: 24),
-                                      label: const Text('Chỉnh sửa', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.blue.shade900,
-                                        side: BorderSide(color: Colors.blue.shade900, width: 2),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 56,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _handleDelete,
-                                      icon: const Icon(Icons.delete, size: 24),
-                                      label: const Text('Xóa phiếu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red.shade800,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                      ),
-                                    ),
-                                  ),
+                                const SizedBox(height: 4),
+                                Text(_receipt!.boatNumber, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+                                const SizedBox(height: 16),
+                                const Text('KHỐI LƯỢNG', style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  AppFormatters.formatKgToTons(_receipt!.weightKg),
+                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFFDE047)),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Details Metadata List
+                          Container(
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: const Color(0xFF334155)),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildDetailRow('Ngày nhập phiếu', AppFormatters.formatDate(_receipt!.receiptDate)),
+                                const Divider(color: Color(0xFF334155), height: 24),
+                                _buildDetailRow('Phương thức nhập', _receipt!.inputMethod == 'camera' ? 'Chụp ảnh' : _receipt!.inputMethod == 'gallery' ? 'Thư viện' : 'Thủ công'),
+                                const Divider(color: Color(0xFF334155), height: 24),
+                                _buildDetailRow('Ghi chú', _receipt!.note.isNotEmpty ? _receipt!.note : '(Không có)'),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon, Color color) {
+  Widget _buildDetailRow(String label, String value) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 30, color: color),
+        Text(label, style: const TextStyle(fontSize: 18, color: Color(0xFF94A3B8))),
         const SizedBox(width: 16),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 16, color: Color(0xFF666666))),
-              const SizedBox(height: 2),
-              Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-            ],
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
       ],

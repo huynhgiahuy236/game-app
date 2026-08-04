@@ -9,13 +9,15 @@ import '../../minesweeper/services/minesweeper_repository.dart';
 import '../../monopoly/services/monopoly_repository.dart';
 import '../../block_puzzle/services/block_puzzle_repository.dart';
 import '../../boat_receipt/views/boat_receipt_home_screen.dart';
+import '../../settings/views/app_settings_screen.dart';
 
 class ModuleItem {
   final String id;
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color color;
+  final Gradient gradient;
+  final Color accentColor;
   final VoidCallback onTap;
 
   ModuleItem({
@@ -23,7 +25,8 @@ class ModuleItem {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.color,
+    required this.gradient,
+    required this.accentColor,
     required this.onTap,
   });
 }
@@ -55,6 +58,7 @@ class MainHomeScreen extends StatefulWidget {
 }
 
 class _MainHomeScreenState extends State<MainHomeScreen> {
+  int _currentBottomNavIndex = 0;
   List<String> _pinnedModuleIds = ['boat_receipts'];
 
   @override
@@ -87,29 +91,101 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: IndexedStack(
+        index: _currentBottomNavIndex,
+        children: [
+          _buildHomeContent(context),
+          AppSettingsScreen(
+            currentModule: 'main',
+            onThemeChanged: widget.onThemeChanged,
+            authRepository: widget.authRepository,
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 70,
+          backgroundColor: const Color(0xFF1E293B),
+          indicatorColor: const Color(0xFF0284C7),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => TextStyle(
+              fontSize: 15,
+              fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.w500,
+              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              size: 26,
+              color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFF94A3B8),
+            ),
+          ),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentBottomNavIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _currentBottomNavIndex = index;
+            });
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_rounded),
+              selectedIcon: Icon(Icons.grid_view_rounded, color: Colors.white),
+              label: 'Trang chủ',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_rounded),
+              selectedIcon: Icon(Icons.settings_rounded, color: Colors.white),
+              label: 'Cài đặt',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeContent(BuildContext context) {
     final user = widget.authRepository.currentUser;
     final displayName = user?.displayName ?? 'Mẹ';
 
     final List<ModuleItem> allModules = [
       ModuleItem(
         id: 'boat_receipts',
-        title: 'Sổ ghe',
-        subtitle: 'Quản lý phiếu nhập lúa, ghe hàng',
-        icon: Icons.directions_boat_filled,
-        color: const Color(0xFF0066CC),
+        title: 'SỔ GHE NHẬP LÚA',
+        subtitle: 'Chụp phiếu & Thống kê khối lượng',
+        icon: Icons.directions_boat_filled_rounded,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF0369A1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        accentColor: const Color(0xFF38BDF8),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BoatReceiptHomeScreen()),
+            MaterialPageRoute(
+              builder: (_) => BoatReceiptHomeScreen(
+                onThemeChanged: widget.onThemeChanged,
+                authRepository: widget.authRepository,
+              ),
+            ),
           );
         },
       ),
       ModuleItem(
         id: 'games',
-        title: 'Trò chơi',
-        subtitle: 'Cờ caro, Đổ mìn, 2048, Sudoku, cờ tỷ phú',
-        icon: Icons.sports_esports,
-        color: const Color(0xFF2E7D32),
+        title: 'KHO TRÒ CHƠI',
+        subtitle: 'Caro, 2048, Sudoku, Đổ mìn, Cờ tỷ phú',
+        icon: Icons.sports_esports_rounded,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2E1065), Color(0xFF0D9488)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        accentColor: const Color(0xFF2DD4BF),
         onTap: () {
           Navigator.push(
             context,
@@ -122,6 +198,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                 monopolyRepository: widget.monopolyRepository,
                 blockPuzzleRepository: widget.blockPuzzleRepository,
                 onThemeChanged: widget.onThemeChanged,
+                authRepository: widget.authRepository,
               ),
             ),
           );
@@ -129,7 +206,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       ),
     ];
 
-    // Order modules by pinned status
     allModules.sort((a, b) {
       final aPinned = _pinnedModuleIds.contains(a.id);
       final bPinned = _pinnedModuleIds.contains(b.id);
@@ -139,37 +215,50 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: Text(
-          'CHỊ MƯỜI - $displayName',
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        backgroundColor: const Color(0xFF0F172A),
+        elevation: 0,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.face_5_rounded, size: 28, color: Color(0xFF38BDF8)),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Chào $displayName',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ],
         ),
-        backgroundColor: Colors.blue.shade900,
-        foregroundColor: Colors.white,
-        elevation: 3,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, size: 28),
+            icon: const Icon(Icons.logout_rounded, size: 28, color: Color(0xFFF43F5E)),
             tooltip: 'Đăng xuất',
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Đăng xuất', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  backgroundColor: const Color(0xFF1E293B),
+                  title: const Text('Đăng xuất', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                   content: const Text(
-                    'Bạn có chắc chắn muốn đăng xuất không?',
-                    style: TextStyle(fontSize: 18),
+                    'Đăng xuất khỏi ứng dụng?',
+                    style: TextStyle(fontSize: 18, color: Color(0xFFCBD5E1)),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Hủy', style: TextStyle(fontSize: 18)),
+                      child: const Text('Hủy', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8))),
                     ),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text('Đăng xuất', style: TextStyle(fontSize: 18, color: Colors.white)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                      child: const Text('Đăng xuất', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -180,110 +269,106 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               }
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'CHỌN CHỨC NĂNG',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: allModules.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 20),
-                  itemBuilder: (context, index) {
-                    final item = allModules[index];
-                    final isPinned = _pinnedModuleIds.contains(item.id);
+      body: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        itemCount: allModules.length,
+        separatorBuilder: (_, index) => const SizedBox(height: 18),
+        itemBuilder: (context, index) {
+          final item = allModules[index];
+          final isPinned = _pinnedModuleIds.contains(item.id);
 
-                    return Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: isPinned ? item.color : Colors.transparent,
-                          width: 2.5,
+          return Container(
+            decoration: BoxDecoration(
+              gradient: item.gradient,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: item.accentColor.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+              border: Border.all(
+                color: isPinned ? item.accentColor : Colors.white.withValues(alpha: 0.15),
+                width: isPinned ? 2.5 : 1.0,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: item.onTap,
+                borderRadius: BorderRadius.circular(24),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: item.accentColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(18),
                         ),
+                        child: Icon(item.icon, size: 40, color: item.accentColor),
                       ),
-                      child: InkWell(
-                        onTap: item.onTap,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color: item.color.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(item.icon, size: 42, color: item.color),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          item.title,
-                                          style: const TextStyle(
-                                            fontSize: 26,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF111111),
-                                          ),
-                                        ),
-                                        if (isPinned) ...[
-                                          const SizedBox(width: 8),
-                                          Icon(Icons.push_pin, size: 22, color: item.color),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item.subtitle,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      item.title,
                                       style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Color(0xFF555555),
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                                  color: isPinned ? item.color : Colors.grey,
-                                  size: 28,
+                                IconButton(
+                                  icon: Icon(
+                                    isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                                    color: isPinned ? item.accentColor : Colors.white54,
+                                    size: 26,
+                                  ),
+                                  onPressed: () => _togglePin(item.id),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
                                 ),
-                                onPressed: () => _togglePin(item.id),
-                                tooltip: isPinned ? 'Gỡ ghim' : 'Ghim chức năng',
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFFCBD5E1),
                               ),
-                              const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 24),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
+                      const SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 20, color: item.accentColor),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
