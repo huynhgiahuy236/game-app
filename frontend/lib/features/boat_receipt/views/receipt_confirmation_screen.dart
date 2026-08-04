@@ -483,15 +483,20 @@ class _ReceiptConfirmationScreenState extends State<ReceiptConfirmationScreen> {
                                 children: [
                                   const Text(
                                     'TỔNG THÀNH TIỀN:',
-                                    style: TextStyle(fontSize: 16, color: Color(0xFFFDE047), fontWeight: FontWeight.bold),
+                                    style: TextStyle(fontSize: 15, color: Color(0xFFFDE047), fontWeight: FontWeight.bold),
                                   ),
-                                  FittedBox(
-                                    child: Text(
-                                      AppFormatters.formatFullCurrency(_calculatedKg * _calculatedPrice),
-                                      style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFFFDE047),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: FittedBox(
+                                      alignment: Alignment.centerRight,
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        AppFormatters.formatFullCurrency(_calculatedKg * _calculatedPrice),
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFFFDE047),
+                                        ),
                                       ),
                                     ),
                                   ),
