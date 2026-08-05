@@ -257,3 +257,172 @@ class ReceiptErrorState extends StatelessWidget {
     ),
   );
 }
+
+/// Badge Icon hiển thị hình ảnh đại diện giả lập cho ghe DT-2764 hoặc AG-26911
+class BoatAvatarBadge extends StatelessWidget {
+  const BoatAvatarBadge({
+    super.key,
+    required this.boatNumber,
+    this.size = 48,
+    this.showLabel = false,
+  });
+
+  final String boatNumber;
+  final double size;
+  final bool showLabel;
+
+  bool get isAG => boatNumber.toUpperCase().contains('AG');
+
+  @override
+  Widget build(BuildContext context) {
+    final isAgBoat = isAG;
+    final primaryColor = isAgBoat ? const Color(0xFF047857) : const Color(0xFF4338CA);
+    final gradientColors = isAgBoat
+        ? [const Color(0xFF059669), const Color(0xFF047857)]
+        : [const Color(0xFF6366F1), const Color(0xFF4338CA)];
+    final iconData = isAgBoat ? Icons.sailing_rounded : Icons.directions_boat_filled_rounded;
+
+    return Container(
+      padding: EdgeInsets.all(size * 0.15),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.25),
+            blurRadius: size * 0.25,
+            offset: Offset(0, size * 0.08),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(
+          iconData,
+          color: Colors.white,
+          size: size * 0.55,
+        ),
+      ),
+    );
+  }
+}
+
+/// Thẻ hình ảnh giả lập đại diện cho phiếu ghe khi chưa/không có ảnh chụp gốc
+class BoatImagePlaceholder extends StatelessWidget {
+  const BoatImagePlaceholder({
+    super.key,
+    required this.boatNumber,
+    this.height = 140,
+    this.onTap,
+  });
+
+  final String boatNumber;
+  final double height;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAG = boatNumber.toUpperCase().contains('AG');
+    final startColor = isAG ? const Color(0xFF065F46) : const Color(0xFF312E81);
+    final endColor = isAG ? const Color(0xFF047857) : const Color(0xFF4338CA);
+    final iconData = isAG ? Icons.sailing_rounded : Icons.directions_boat_filled_rounded;
+    final labelText = isAG ? 'Ghe AG-26911 (Icon giả lập)' : 'Ghe DT-2764 (Icon giả lập)';
+
+    final content = Container(
+      height: height,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [startColor, endColor],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: endColor.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -10,
+            bottom: -15,
+            child: Icon(
+              iconData,
+              size: height * 0.85,
+              color: Colors.white.withValues(alpha: 0.12),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(iconData, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          boatNumber.isNotEmpty ? boatNumber : 'Ghe chưa chọn',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          labelText,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (onTap != null)
+                    const Icon(
+                      Icons.open_in_full_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: content,
+      ),
+    );
+  }
+}
+

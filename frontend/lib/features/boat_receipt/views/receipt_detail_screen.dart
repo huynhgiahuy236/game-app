@@ -168,6 +168,9 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                 if (_receipt!.image?.secureUrl.isNotEmpty == true) ...[
                   _image(),
                   const SizedBox(height: 14),
+                ] else ...[
+                  BoatImagePlaceholder(boatNumber: _receipt!.boatNumber),
+                  const SizedBox(height: 14),
                 ],
                 _hero(),
                 const SizedBox(height: 14),
@@ -276,23 +279,34 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'SỐ GHE',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFFBAE6FD),
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _receipt!.boatNumber,
-          style: const TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'SỐ GHE',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFE9E0FF),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _receipt!.boatNumber,
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            BoatAvatarBadge(boatNumber: _receipt!.boatNumber, size: 52),
+          ],
         ),
         const SizedBox(height: 18),
         Row(

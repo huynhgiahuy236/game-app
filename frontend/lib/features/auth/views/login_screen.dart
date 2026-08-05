@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 import '../services/auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -42,12 +43,25 @@ class _LoginScreenState extends State<LoginScreen> {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: const Color(0xFF1E293B),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: const Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Color(0xFFF43F5E), size: 32),
+                Icon(
+                  Icons.error_outline_rounded,
+                  color: Color(0xFFF43F5E),
+                  size: 32,
+                ),
                 SizedBox(width: 10),
-                Text('Đăng nhập thất bại', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(
+                  'Đăng nhập thất bại',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
             content: Text(
@@ -59,9 +73,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () => Navigator.pop(ctx),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0284C7),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('ĐÓNG', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'ĐÓNG',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -91,31 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // App Avatar & Branding Header
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0284C7).withValues(alpha: 0.4),
-                            blurRadius: 24,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.directions_boat_filled_rounded,
-                        size: 72,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                  const Center(child: AppLogo(size: 120, radius: 34)),
                   const SizedBox(height: 24),
                   const Text(
                     'CHỊ MƯỜI APP',
@@ -131,10 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text(
                     'Sổ Ghe Nhập TRẤU & Kho Trò Chơi',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF94A3B8),
-                    ),
+                    style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8)),
                   ),
                   const SizedBox(height: 36),
 
@@ -144,7 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E293B).withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFF334155), width: 1.5),
+                      border: Border.all(
+                        color: const Color(0xFF334155),
+                        width: 1.5,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.3),
@@ -160,13 +159,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF991B1B).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFF991B1B,
+                              ).withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFF43F5E), width: 1.5),
+                              border: Border.all(
+                                color: const Color(0xFFF43F5E),
+                                width: 1.5,
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline_rounded, color: Color(0xFFF43F5E), size: 28),
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: Color(0xFFF43F5E),
+                                  size: 28,
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -196,19 +204,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _usernameController,
-                          style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.person_rounded, size: 28, color: Color(0xFF38BDF8)),
+                            prefixIcon: const Icon(
+                              Icons.person_rounded,
+                              size: 28,
+                              color: Color(0xFF38BDF8),
+                            ),
                             filled: true,
                             fillColor: const Color(0xFF0F172A),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: Color(0xFF475569)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF475569),
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: Color(0xFF38BDF8), width: 2.5),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF38BDF8),
+                                width: 2.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
@@ -233,12 +257,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _isObscure,
-                          style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.lock_rounded, size: 28, color: Color(0xFF38BDF8)),
+                            prefixIcon: const Icon(
+                              Icons.lock_rounded,
+                              size: 28,
+                              color: Color(0xFF38BDF8),
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _isObscure ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                                _isObscure
+                                    ? Icons.visibility_rounded
+                                    : Icons.visibility_off_rounded,
                                 size: 28,
                                 color: const Color(0xFF94A3B8),
                               ),
@@ -250,14 +284,22 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             filled: true,
                             fillColor: const Color(0xFF0F172A),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: Color(0xFF475569)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF475569),
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: Color(0xFF38BDF8), width: 2.5),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF38BDF8),
+                                width: 2.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
@@ -283,7 +325,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  )
                                 : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [

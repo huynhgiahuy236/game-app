@@ -673,10 +673,11 @@ class _HeroHeaderState extends State<_HeroHeader>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.asset(
-                'assets/logo.jpg',
+                'assets/splat.png',
                 fit: BoxFit.cover,
                 width: 56,
                 height: 56,
+                errorBuilder: (_, __, ___) => const Icon(Icons.grid_view_rounded, size: 36),
               ),
             ),
           ),
@@ -2790,8 +2791,13 @@ class AppBrandHeader extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(size * 0.28),
-              child: Image.asset('assets/logo.jpg',
-                  fit: BoxFit.cover, width: size, height: size),
+              child: Image.asset(
+                'assets/splat.png',
+                fit: BoxFit.cover,
+                width: size,
+                height: size,
+                errorBuilder: (_, __, ___) => Icon(Icons.grid_view_rounded, size: size * 0.6),
+              ),
             ),
           ),
           const SizedBox(width: 14),

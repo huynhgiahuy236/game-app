@@ -10,10 +10,17 @@ class AuthRepository extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = true;
   bool _isAuthenticated = false;
+  bool _isConnecting = false;
+  int _startupSeconds = 0;
+  String _startupMessage = 'Đang đọc phiên đăng nhập';
+  Timer? _startupTicker;
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
+  bool get isConnecting => _isConnecting;
+  int get startupSeconds => _startupSeconds;
+  String get startupMessage => _startupMessage;
 
   final ApiClient _apiClient = ApiClient.instance;
 
@@ -23,25 +30,64 @@ class AuthRepository extends ChangeNotifier {
 
     try {
       final token = await _apiClient.getAccessToken();
+
+      // Reading secure storage is the only work that blocks the first screen.
+      // Network validation continues in the background so a sleeping server
+      // never holds the UI on the splash screen.
+      _isLoading = false;
+      _isAuthenticated = token != null && token.isNotEmpty;
+      _isConnecting = true;
+      _startupMessage = 'Đang kết nối máy chủ';
+      _startStartupTicker();
+      notifyListeners();
+
       if (token != null && token.isNotEmpty) {
         try {
           final userData = await _apiClient
               .get('/auth/me')
               .timeout(_startupWait);
           _currentUser = UserModel.fromJson(userData);
+          _isAuthenticated = true;
         } catch (_) {}
       } else {
-        // Auto-login with default credentials if available
         try {
-          await login('admin', 'chimuoi@123').timeout(_startupWait);
+          final resData = await _apiClient
+              .post(
+                '/auth/login',
+                body: {'username': 'admin', 'password': 'chimuoi@123'},
+              )
+              .timeout(_startupWait);
+          await _apiClient.saveTokens(
+            resData['accessToken'],
+            resData['refreshToken'],
+          );
+          _currentUser = UserModel.fromJson(resData['user']);
+          _isAuthenticated = true;
+          await _cachePreferences(_currentUser!.preferences);
         } catch (_) {}
       }
     } catch (_) {
     } finally {
-      _isAuthenticated = true;
       _isLoading = false;
+      _isConnecting = false;
+      _startupMessage = _isAuthenticated
+          ? 'Đã kết nối'
+          : 'Đang dùng chế độ ngoại tuyến';
+      _startupTicker?.cancel();
       notifyListeners();
     }
+  }
+
+  void _startStartupTicker() {
+    _startupTicker?.cancel();
+    _startupSeconds = 0;
+    _startupTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      _startupSeconds++;
+      if (_startupSeconds >= 5) {
+        _startupMessage = 'Máy chủ đang khởi động';
+      }
+      notifyListeners();
+    });
   }
 
   Future<void> login(String username, String password) async {
@@ -87,5 +133,11 @@ class AuthRepository extends ChangeNotifier {
   Future<void> _cachePreferences(UserPreferences prefs) async {
     final sp = await SharedPreferences.getInstance();
     await sp.setStringList('pinned_modules', prefs.pinnedModules);
+  }
+
+  @override
+  void dispose() {
+    _startupTicker?.cancel();
+    super.dispose();
   }
 }

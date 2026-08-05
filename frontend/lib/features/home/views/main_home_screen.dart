@@ -139,6 +139,9 @@ class _MainHomeScreenState extends State<MainHomeScreen>
             entrance: _entrance,
             displayName:
                 widget.authRepository.currentUser?.displayName ?? 'Mười',
+            isConnecting: widget.authRepository.isConnecting,
+            connectionSeconds: widget.authRepository.startupSeconds,
+            connectionMessage: widget.authRepository.startupMessage,
             pinnedIds: _pinnedModuleIds,
             onTogglePin: _togglePin,
             onReceipts: _openReceipts,
@@ -200,6 +203,9 @@ class _HomeDashboard extends StatelessWidget {
   const _HomeDashboard({
     required this.entrance,
     required this.displayName,
+    required this.isConnecting,
+    required this.connectionSeconds,
+    required this.connectionMessage,
     required this.pinnedIds,
     required this.onTogglePin,
     required this.onReceipts,
@@ -209,6 +215,9 @@ class _HomeDashboard extends StatelessWidget {
 
   final AnimationController entrance;
   final String displayName;
+  final bool isConnecting;
+  final int connectionSeconds;
+  final String connectionMessage;
   final List<String> pinnedIds;
   final ValueChanged<String> onTogglePin;
   final VoidCallback onReceipts;
@@ -234,7 +243,15 @@ class _HomeDashboard extends StatelessWidget {
                     padding: EdgeInsets.fromLTRB(gutter, 12, gutter, 116),
                     sliver: SliverList.list(
                       children: [
-                        _reveal(0, _TopBar(onLogout: onLogout)),
+                        _reveal(
+                          0,
+                          _TopBar(
+                            onLogout: onLogout,
+                            isConnecting: isConnecting,
+                            connectionSeconds: connectionSeconds,
+                            connectionMessage: connectionMessage,
+                          ),
+                        ),
                         const SizedBox(height: 28),
                         _reveal(1, _Hero(displayName: displayName)),
                         const SizedBox(height: 28),
@@ -373,40 +390,59 @@ class _OrbPainter extends CustomPainter {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onLogout});
+  const _TopBar({
+    required this.onLogout,
+    required this.isConnecting,
+    required this.connectionSeconds,
+    required this.connectionMessage,
+  });
   final VoidCallback onLogout;
+  final bool isConnecting;
+  final int connectionSeconds;
+  final String connectionMessage;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            gradient: AppGradients.roseGold,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFF43F5E).withValues(alpha: .25),
-                blurRadius: 18,
-              ),
-            ],
-          ),
-          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
-        ),
+        const AppLogo(size: 46, radius: 15),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('CHỊ MƯỜI', style: Theme.of(context).textTheme.titleLarge),
-              Text(
-                'Mọi thứ trong một nơi',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: Row(
+                  key: ValueKey('$isConnecting-$connectionSeconds'),
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: isConnecting
+                            ? scheme.tertiary
+                            : AppTheme.emeraldGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        isConnecting
+                            ? '$connectionMessage • ${connectionSeconds}s'
+                            : connectionMessage,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -648,7 +684,7 @@ class _ReceiptCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => _ModuleCard(
-        minHeight: 280,
+    minHeight: 280,
     title: 'Sổ ghe',
     subtitle: 'Phiếu nhập & thống kê trấu',
     eyebrow: 'CÔNG VIỆC',
@@ -683,7 +719,7 @@ class _GameCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => _ModuleCard(
-        minHeight: 280,
+    minHeight: 280,
     title: 'Game',
     subtitle: '6 trò chơi • không giới hạn',
     eyebrow: 'GIẢI TRÍ',
@@ -749,9 +785,9 @@ class _ModuleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: accent.withValues(alpha: .2),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
+              color: Colors.black.withValues(alpha: .18),
+              blurRadius: 22,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -771,13 +807,14 @@ class _ModuleCard extends StatelessWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: .16),
+                          color: accent,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: .18),
-                          ),
                         ),
-                        child: Icon(icon, color: Colors.white, size: 27),
+                        child: Icon(
+                          icon,
+                          color: const Color(0xFF171122),
+                          size: 27,
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -799,13 +836,50 @@ class _ModuleCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    eyebrow,
-                    style: TextStyle(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
                       color: accent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
+                      borderRadius: BorderRadius.circular(99),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withValues(alpha: .28),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF171122),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: .25),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          eyebrow,
+                          style: TextStyle(
+                            color: const Color(0xFF171122),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 6),

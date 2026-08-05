@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -566,4 +568,51 @@ abstract final class AppRadius {
   static const Radius lg = Radius.circular(16);
   static const Radius xl = Radius.circular(20);
   static const Radius xxl = Radius.circular(28);
+}
+
+/// Logo thương hiệu dùng thống nhất ở mọi màn hình nhận diện ứng dụng.
+class AppLogo extends StatelessWidget {
+  const AppLogo({
+    super.key,
+    this.size = 56,
+    this.radius = 16,
+    this.showBorder = true,
+  });
+
+  final double size;
+  final double radius;
+  final bool showBorder;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(math.max(2, size * .045)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+        border: showBorder
+            ? Border.all(color: scheme.primary.withValues(alpha: .7), width: 2)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: .24),
+            blurRadius: size * .35,
+            offset: Offset(0, size * .1),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(math.max(1, radius - 4)),
+        child: Image.asset(
+          'assets/splat.png',
+          fit: BoxFit.cover,
+          semanticLabel: 'Logo Chị Mười',
+          errorBuilder: (_, __, ___) => const Icon(Icons.grid_view_rounded, size: 36, color: Color(0xFF6542B5)),
+        ),
+      ),
+    );
+  }
 }
