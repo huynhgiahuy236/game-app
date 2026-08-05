@@ -19,10 +19,11 @@ class ReceiptImageViewerScreen extends StatelessWidget {
     Widget imageWidget;
     if (localFile != null) {
       if (kIsWeb) {
-        imageWidget = const Center(
-          child: Text(
-            'Web preview không hỗ trợ file cục bộ',
-            style: TextStyle(color: Colors.white, fontSize: 18),
+        imageWidget = Image.network(
+          localFile!.path,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Center(
+            child: Icon(Icons.receipt_long_rounded, size: 64, color: Colors.white),
           ),
         );
       } else {

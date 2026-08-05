@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -457,7 +458,15 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                   AspectRatio(
                     aspectRatio: 16 / 9,
                     child: hasLocalFile
-                        ? Image.file(_localImageFile!, fit: BoxFit.cover)
+                        ? (kIsWeb
+                            ? Image.network(
+                                _localImageFile!.path,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.receipt_long_rounded, size: 44),
+                                ),
+                              )
+                            : Image.file(_localImageFile!, fit: BoxFit.cover))
                         : Image.network(
                             _receipt!.image!.secureUrl,
                             fit: BoxFit.cover,

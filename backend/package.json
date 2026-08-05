@@ -9,6 +9,7 @@
     "start": "tsc && node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "seed:user": "ts-node scripts/seedUser.ts",
+    "seed:reset-receipts": "ts-node scripts/resetReceipts.ts",
     "test": "jest --runInBand",
     "type-check": "tsc --noEmit"
   },
