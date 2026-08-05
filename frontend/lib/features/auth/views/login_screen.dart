@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Sổ Ghe Nhập trấu & Kho Trò Chơi',
+                    'Sổ Ghe Nhập TRẤU & Kho Trò Chơi',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,

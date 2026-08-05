@@ -107,7 +107,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     ),
     body: Column(
       children: [
-        _topControls(),
+        _compactControls(),
         Expanded(
           child: _loading
               ? const Center(
@@ -121,6 +121,47 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     ),
   );
 
+  Widget _compactControls() => Container(
+    color: ReceiptUi.surface(context),
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+    child: Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: ReceiptUi.canvas(context),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(child: _periodButton('Tuần', _Period.week)),
+              Expanded(child: _periodButton('Tháng', _Period.month)),
+              Expanded(child: _periodButton('Năm', _Period.year)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _arrow(Icons.chevron_left_rounded, 'Kỳ trước', -1),
+            Expanded(
+              child: Text(
+                _periodLabel(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            _arrow(Icons.chevron_right_rounded, 'Kỳ sau', 1),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  // ignore: unused_element
   Widget _topControls() => Container(
     color: ReceiptUi.surface(context),
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
@@ -263,6 +304,154 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
       );
 
   Widget _content() {
+    final data = _data ?? const <String, dynamic>{};
+    final boats = _boats(data);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+      children: [
+        _summary(data),
+        const SizedBox(height: 14),
+        _actionCard(
+          Icons.receipt_long_outlined,
+          'Xem chi tiết thống kê',
+          'So sánh và thông tin chuyên sâu',
+          () => _showDetails(data, boats),
+        ),
+        const SizedBox(height: 10),
+        _actionCard(
+          Icons.directions_boat_outlined,
+          'Xem theo từng ghe',
+          '${boats.length} ghe trong kỳ đang chọn',
+          () => _showBoats(data, boats),
+        ),
+      ],
+    );
+  }
+
+  Widget _actionCard(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) => ReceiptSurface(
+    onTap: onTap,
+    child: Row(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: ReceiptColors.blueSoft,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: ReceiptColors.blueStrong, size: 28),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: ReceiptUi.secondaryText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right_rounded, size: 28),
+      ],
+    ),
+  );
+
+  Future<void> _showDetails(
+    Map<String, dynamic> data,
+    List<Map<String, dynamic>> boats,
+  ) => _showStatsSheet('Chi tiết thống kê', [
+    _comparison(data, _previousData ?? const {}),
+    const SizedBox(height: 12),
+    _operatingMetrics(data),
+    const SizedBox(height: 12),
+    _highlights(data, boats),
+    const SizedBox(height: 12),
+    _breakdown(data),
+  ]);
+
+  Future<void> _showBoats(
+    Map<String, dynamic> data,
+    List<Map<String, dynamic>> boats,
+  ) => _showStatsSheet('Thống kê theo ghe', [
+    _boatHeader(boats, data),
+    const SizedBox(height: 12),
+    if (boats.isEmpty)
+      const ReceiptEmptyState(
+        icon: Icons.directions_boat_outlined,
+        title: 'Chưa có chuyến ghe',
+        message: 'Kỳ này chưa có phiếu nhập.',
+      )
+    else
+      ...boats.map(
+        (boat) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _boatCard(boat, _int(data['totalKg'])),
+        ),
+      ),
+  ]);
+
+  Future<void> _showStatsSheet(String title, List<Widget> children) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.82,
+          minChildSize: 0.55,
+          maxChildSize: 0.95,
+          builder: (context, controller) => ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: ReceiptUi.line(context),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...children,
+            ],
+          ),
+        ),
+      );
+
+  // ignore: unused_element
+  Widget _legacyContent() {
     final data = _data ?? const <String, dynamic>{};
     final boats = _boats(data);
     return ListView(

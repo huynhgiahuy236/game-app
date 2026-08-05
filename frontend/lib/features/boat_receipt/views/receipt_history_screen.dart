@@ -77,7 +77,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     ),
     body: Column(
       children: [
-        _filters(),
+        _compactFilters(),
         Expanded(
           child: _isLoading
               ? const Center(
@@ -111,6 +111,217 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     ),
   );
 
+  Widget _compactFilters() => Container(
+    color: ReceiptUi.surface(context),
+    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+    child: SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: OutlinedButton.icon(
+        onPressed: _showFilters,
+        icon: const Icon(Icons.tune_rounded, size: 28),
+        label: Align(
+          alignment: Alignment.centerLeft,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Lọc phiếu',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              Text(
+                _filterSummary(),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: ReceiptUi.secondaryText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          foregroundColor: ReceiptColors.ink,
+          side: BorderSide(color: ReceiptUi.line(context)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  String _filterSummary() {
+    final boat = _selectedBoat ?? 'Tất cả ghe';
+    final time = switch (_filterType) {
+      'today' => 'Hôm nay',
+      'week' => 'Tuần này',
+      'month' => 'Tháng này',
+      'date' when _selectedDate != null => AppFormatters.formatDate(
+        _selectedDate!,
+      ),
+      _ => 'Tất cả ngày',
+    };
+    return '$boat · $time';
+  }
+
+  Future<void> _showFilters() async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: ReceiptUi.line(context),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Lọc danh sách phiếu',
+              style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Chọn ghe',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _sheetChoice(
+                    sheetContext,
+                    'Tất cả',
+                    _selectedBoat == null,
+                    () => setState(() => _selectedBoat = null),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _sheetChoice(
+                    sheetContext,
+                    'DT-2764',
+                    _selectedBoat == 'DT-2764',
+                    () => setState(() => _selectedBoat = 'DT-2764'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _sheetChoice(
+                    sheetContext,
+                    'AG-26911',
+                    _selectedBoat == 'AG-26911',
+                    () => setState(() => _selectedBoat = 'AG-26911'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Thời gian',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _sheetTime(sheetContext, 'Tất cả', 'all'),
+                _sheetTime(sheetContext, 'Hôm nay', 'today'),
+                _sheetTime(sheetContext, 'Tuần này', 'week'),
+                _sheetTime(sheetContext, 'Tháng này', 'month'),
+              ],
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () async {
+                Navigator.pop(sheetContext);
+                await _pickDate();
+              },
+              icon: const Icon(Icons.calendar_today_outlined),
+              label: Text(
+                _selectedDate == null
+                    ? 'Chọn ngày cụ thể'
+                    : AppFormatters.formatDate(_selectedDate!),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                alignment: Alignment.centerLeft,
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: () => Navigator.pop(sheetContext, true),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(56),
+                backgroundColor: ReceiptColors.blueStrong,
+              ),
+              child: const Text(
+                'Xem kết quả',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == true) _fetchHistory();
+  }
+
+  Widget _sheetChoice(
+    BuildContext sheetContext,
+    String label,
+    bool selected,
+    VoidCallback select,
+  ) => OutlinedButton(
+    onPressed: () {
+      select();
+      Navigator.pop(sheetContext, true);
+    },
+    style: OutlinedButton.styleFrom(
+      minimumSize: const Size.fromHeight(52),
+      backgroundColor: selected ? ReceiptColors.blueSoft : null,
+    ),
+    child: Text(label, maxLines: 1),
+  );
+
+  Widget _sheetTime(BuildContext sheetContext, String label, String value) =>
+      ChoiceChip(
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        selected: _filterType == value,
+        onSelected: (_) {
+          setState(() {
+            _filterType = value;
+            _selectedDate = null;
+          });
+          Navigator.pop(sheetContext, true);
+        },
+      );
+
+  // Kept as a private layout reference while the compact filter is in use.
+  // ignore: unused_element
   Widget _filters() => Container(
     color: ReceiptUi.surface(context),
     padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
