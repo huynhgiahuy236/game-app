@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/formatters.dart';
+import '../models/boat_receipt_model.dart';
 import '../services/boat_receipt_repository.dart';
+import 'receipt_detail_screen.dart';
 import 'receipt_ui.dart';
 
 enum _Period { week, month, year }
@@ -23,6 +25,8 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
   Map<String, dynamic>? _previousData;
   String? _error;
   bool _loading = true;
+
+  List<BoatReceiptModel> _periodReceipts = [];
 
   @override
   void initState() {
@@ -49,17 +53,38 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
       final values = await Future.wait([
         _fetchStats(_anchor),
         _fetchStats(previousAnchor),
+        _fetchPeriodReceipts(_anchor),
       ]);
       if (mounted) {
         setState(() {
-          _data = values[0];
-          _previousData = values[1];
+          _data = values[0] as Map<String, dynamic>;
+          _previousData = values[1] as Map<String, dynamic>;
+          _periodReceipts = values[2] as List<BoatReceiptModel>;
         });
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<List<BoatReceiptModel>> _fetchPeriodReceipts(DateTime anchor) {
+    switch (_period) {
+      case _Period.week:
+        final startOfWeek = anchor.subtract(Duration(days: anchor.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+        final fromStr =
+            '${startOfWeek.year}-${_two(startOfWeek.month)}-${_two(startOfWeek.day)}';
+        final toStr =
+            '${endOfWeek.year}-${_two(endOfWeek.month)}-${_two(endOfWeek.day)}';
+        return _repository.getReceipts(from: fromStr, to: toStr, limit: 100);
+      case _Period.month:
+        final monthStr = '${anchor.year}-${_two(anchor.month)}';
+        return _repository.getReceipts(month: monthStr, limit: 100);
+      case _Period.year:
+        final yearStr = '${anchor.year}';
+        return _repository.getReceipts(year: yearStr, limit: 100);
     }
   }
 
@@ -222,7 +247,105 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
           '${boats.length} ghe trong kỳ đang chọn',
           () => _openBoatsScreen(data, boats),
         ),
+        const SizedBox(height: 22),
+        ReceiptSectionTitle(
+          'Danh sách ${_periodReceipts.length} chuyến trong kỳ',
+        ),
+        const SizedBox(height: 10),
+        if (_periodReceipts.isEmpty)
+          const ReceiptEmptyState(
+            icon: Icons.receipt_long_outlined,
+            title: 'Không có chuyến nào',
+            message: 'Trong khoảng thời gian này chưa phát sinh phiếu cân trấu.',
+          )
+        else
+          ..._periodReceipts.map(
+            (receipt) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _receiptTile(receipt),
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _receiptTile(BoatReceiptModel receipt) {
+    final isAg = receipt.boatNumber.toUpperCase().contains('AG');
+    final boatColor = isAg ? ReceiptColors.green : ReceiptColors.blueStrong;
+    final totalAmount = receipt.weightKg * receipt.pricePerKg;
+
+    return ReceiptSurface(
+      borderColor: boatColor.withValues(alpha: 0.4),
+      surfaceColor: ReceiptUi.surface(context),
+      onTap: () async {
+        await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
+          ),
+        );
+        _load();
+      },
+      child: Row(
+        children: [
+          BoatAvatarBadge(boatNumber: receipt.boatNumber, size: 48),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ghe ${receipt.boatNumber}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: boatColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppFormatters.formatDate(receipt.receiptDate),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: ReceiptUi.secondaryText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                AppFormatters.formatKgToTons(receipt.weightKg),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: ReceiptUi.ink(context),
+                ),
+              ),
+              if (totalAmount > 0) ...[
+                const SizedBox(height: 3),
+                Text(
+                  AppFormatters.formatCurrency(totalAmount),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: ReceiptColors.green,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: ReceiptUi.secondaryText(context),
+          ),
+        ],
+      ),
     );
   }
 
@@ -335,13 +458,21 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     final amount = _int(boat['totalAmount']);
     final avgKg = trips == 0 ? 0 : kg ~/ trips;
     final avgPrice = kg == 0 ? 0 : amount ~/ kg;
+    final boatReceipts = _periodReceipts
+        .where(
+          (r) =>
+              r.boatNumber.trim().toUpperCase() ==
+              boatNumber.trim().toUpperCase(),
+        )
+        .toList();
+
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (routeContext) => Scaffold(
           backgroundColor: ReceiptUi.canvas(routeContext),
           appBar: ReceiptUi.appBar(
             routeContext,
-            boatNumber,
+            'Ghe $boatNumber',
             subtitle: _periodLabel(),
           ),
           body: ListView(
@@ -374,6 +505,24 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 22),
+              ReceiptSectionTitle(
+                'Danh sách ${boatReceipts.length} chuyến của ghe $boatNumber',
+              ),
+              const SizedBox(height: 10),
+              if (boatReceipts.isEmpty)
+                const ReceiptEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'Không có chuyến nào',
+                  message: 'Ghe này chưa có phiếu nhập trong kỳ.',
+                )
+              else
+                ...boatReceipts.map(
+                  (receipt) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _receiptTile(receipt),
+                  ),
+                ),
             ],
           ),
         ),
@@ -383,7 +532,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
 
   Widget _detailRow(String label, String value, {bool strong = false}) =>
       Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
             Expanded(
@@ -391,7 +540,9 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 16,
+                  height: 1.35,
                   color: ReceiptUi.secondaryText(context),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -400,7 +551,8 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                 value,
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  fontSize: strong ? 18 : 16,
+                  fontSize: strong ? 19 : 17,
+                  height: 1.35,
                   fontWeight: FontWeight.w900,
                   color: strong ? ReceiptColors.green : null,
                 ),
@@ -505,13 +657,18 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
 
   Widget _metricRow(String label, String value, {bool strong = false}) =>
       Padding(
-        padding: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.only(top: 18),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 16, color: Color(0xFFBAE6FD)),
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.35,
+                  color: Color(0xFFBAE6FD),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Flexible(
@@ -519,7 +676,8 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                 value,
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  fontSize: strong ? 19 : 16,
+                  fontSize: strong ? 20 : 17,
+                  height: 1.35,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),

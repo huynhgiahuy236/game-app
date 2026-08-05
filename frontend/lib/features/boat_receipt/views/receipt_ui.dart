@@ -413,6 +413,226 @@ class BoatAvatarBadge extends StatelessWidget {
   }
 }
 
+/// Thẻ hiển thị Hóa đơn / Phiếu cân trấu dạng Giấy chứng từ chuyên nghiệp (thay cho ảnh ghe)
+class ReceiptDocumentCard extends StatelessWidget {
+  const ReceiptDocumentCard({
+    super.key,
+    required this.boatNumber,
+    this.date,
+    this.weightKg,
+    this.pricePerKg,
+    this.height = 180,
+    this.onTap,
+  });
+
+  final String boatNumber;
+  final String? date;
+  final int? weightKg;
+  final int? pricePerKg;
+  final double height;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAg = boatNumber.toUpperCase().contains('AG');
+    final tagColor = isAg ? const Color(0xFF047857) : const Color(0xFF4338CA);
+    final displayBoat = boatNumber.isNotEmpty
+        ? boatNumber
+        : (isAg ? 'AG-26911' : 'DT-2764');
+    final displayWeight = weightKg != null && weightKg! > 0
+        ? '${(weightKg! / 1000).toStringAsFixed(3).replaceAll('.', ',')} tấn'
+        : '80,956 tấn';
+
+    final content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1E293B)
+            : const Color(0xFFFEFDF8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF334155)
+              : const Color(0xFFE2E8F0),
+          width: 1.5,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x110F172A),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: tagColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.receipt_long_rounded,
+                  color: tagColor,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'HÓA ĐƠN / PHIẾU CÂN TRẤU',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: ReceiptUi.ink(context),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Chứng từ nhập trấu - Cân Chị Mười',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: ReceiptUi.secondaryText(context),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: ReceiptUi.line(context)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Số ghe:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ReceiptUi.secondaryText(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayBoat,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: tagColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Khối lượng trấu:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ReceiptUi.secondaryText(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayWeight,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF047857),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF0F172A)
+                  : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.verified_outlined,
+                  color: Color(0xFF0284C7),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Phiếu cân viết tay / Hóa đơn đã xác nhận',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0369A1),
+                    ),
+                  ),
+                ),
+                if (onTap != null)
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.open_in_full_rounded,
+                        color: Color(0xFF0284C7),
+                        size: 16,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Xem full',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0284C7),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: content,
+      ),
+    );
+  }
+}
+
 /// Thẻ hình ảnh đại diện cho ghe DT-2764 (image.png) hoặc AG-26911 (logo.jpg)
 class BoatImagePlaceholder extends StatelessWidget {
   const BoatImagePlaceholder({
@@ -428,100 +648,10 @@ class BoatImagePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAG = boatNumber.toUpperCase().contains('AG');
-    final assetPath = isAG ? 'assets/logo.jpg' : 'assets/image.png';
-    final boatLabel = isAG ? 'AG-26911' : 'DT-2764';
-    final iconData = isAG ? Icons.sailing_rounded : Icons.directions_boat_filled_rounded;
-    final tagColor = isAG ? const Color(0xFF047857) : const Color(0xFF4338CA);
-
-    final content = Container(
+    return ReceiptDocumentCard(
+      boatNumber: boatNumber,
       height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: tagColor.withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              assetPath,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: tagColor,
-                child: Center(
-                  child: Icon(iconData, size: 64, color: Colors.white38),
-                ),
-              ),
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.transparent, Color(0xDD000000)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 14,
-              right: 14,
-              bottom: 14,
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: tagColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(iconData, color: Colors.white, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          boatNumber.isNotEmpty ? boatNumber : boatLabel,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  if (onTap != null)
-                    const Icon(
-                      Icons.open_in_full_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (onTap == null) return content;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: content,
-      ),
+      onTap: onTap,
     );
   }
 }

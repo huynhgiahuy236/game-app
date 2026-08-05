@@ -124,15 +124,25 @@ class BoatReceiptRepository {
     int? weightKg,
     int? pricePerKg,
     String? note,
+    File? imageFile,
   }) async {
-    final body = <String, dynamic>{};
-    if (receiptDate != null) body['receiptDate'] = receiptDate;
-    if (boatNumber != null) body['boatNumber'] = boatNumber;
-    if (weightKg != null) body['weightKg'] = weightKg;
-    if (pricePerKg != null) body['pricePerKg'] = pricePerKg;
-    if (note != null) body['note'] = note;
+    final fields = <String, String>{};
+    if (receiptDate != null) fields['receiptDate'] = receiptDate;
+    if (boatNumber != null) fields['boatNumber'] = boatNumber;
+    if (weightKg != null) fields['weightKg'] = weightKg.toString();
+    if (pricePerKg != null) fields['pricePerKg'] = pricePerKg.toString();
+    if (note != null) fields['note'] = note;
 
-    final resData = await _apiClient.patch('/receipts/$id', body: body);
+    if (imageFile != null) {
+      final resData = await _apiClient.multipartPost(
+        '/receipts/$id',
+        fields: fields,
+        imageFile: imageFile,
+      );
+      return BoatReceiptModel.fromJson(resData);
+    }
+
+    final resData = await _apiClient.patch('/receipts/$id', body: fields);
     return BoatReceiptModel.fromJson(resData);
   }
 

@@ -26,7 +26,7 @@ class _GameAppState extends State<GameApp> {
   final MinesweeperRepository minesweeperRepository = MinesweeperRepository();
   final MonopolyRepository monopolyRepository = MonopolyRepository();
   final BlockPuzzleRepository blockPuzzleRepository = BlockPuzzleRepository();
-  ThemeMode themeMode = ThemeMode.system;
+  ThemeMode themeMode = ThemeMode.light;
 
   @override
   void initState() {

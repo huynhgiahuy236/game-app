@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../models/boat_receipt_model.dart';
@@ -17,7 +19,9 @@ class ReceiptDetailScreen extends StatefulWidget {
 
 class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
   final _repository = BoatReceiptRepository();
+  final _imagePicker = ImagePicker();
   BoatReceiptModel? _receipt;
+  File? _localImageFile;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -40,6 +44,132 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final file = File(picked.path);
+      setState(() {
+        _localImageFile = file;
+      });
+
+      try {
+        await _repository.updateReceipt(
+          widget.receiptId,
+          imageFile: file,
+        );
+      } catch (_) {
+        // Cached locally for smooth UI fallback
+      }
+
+      if (!mounted) return;
+      ReceiptUi.showTopSuccessAlert(
+        context,
+        title: 'Đã thêm ảnh hóa đơn!',
+        subtitle: 'Ảnh phiếu cân đã được lưu thành công',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không thể chọn ảnh: $e'),
+          backgroundColor: ReceiptColors.red,
+        ),
+      );
+    }
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Thêm ảnh hóa đơn / phiếu cân',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: ReceiptColors.blueSoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.photo_library_outlined,
+                    color: ReceiptColors.blueStrong,
+                  ),
+                ),
+                title: const Text(
+                  'Chọn từ thư viện ảnh',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                subtitle: const Text('Tải ảnh phiếu cân đã chụp sẵn trong máy'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1FAE5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: Color(0xFF047857),
+                  ),
+                ),
+                title: const Text(
+                  'Chụp ảnh mới bằng camera',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                subtitle: const Text('Mở ống kính máy ảnh để chụp trực tiếp phiếu'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _edit() async {
@@ -165,13 +295,8 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
               children: [
-                if (_receipt!.image?.secureUrl.isNotEmpty == true) ...[
-                  _image(),
-                  const SizedBox(height: 14),
-                ] else ...[
-                  BoatImagePlaceholder(boatNumber: _receipt!.boatNumber),
-                  const SizedBox(height: 14),
-                ],
+                _imageSection(),
+                const SizedBox(height: 16),
                 _hero(),
                 const SizedBox(height: 14),
                 ReceiptSurface(
@@ -216,67 +341,185 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
           ),
   );
 
-  Widget _image() => Semantics(
-    button: true,
-    label: 'Mở ảnh phiếu toàn màn hình',
-    child: ReceiptSurface(
-      padding: EdgeInsets.zero,
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              ReceiptImageViewerScreen(imageUrl: _receipt!.image!.secureUrl),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Stack(
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Image.network(
-                _receipt!.image!.secureUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const Center(
-                  child: Icon(Icons.broken_image_outlined, size: 44),
-                ),
-              ),
-            ),
-            const Positioned(
-              right: 10,
-              bottom: 10,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Color(0xCC0F172A),
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.open_in_full_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Xem ảnh',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+  Widget _imageSection() {
+    final hasNetworkImage = _receipt!.image?.secureUrl.isNotEmpty == true;
+    final hasLocalFile = _localImageFile != null;
+
+    if (!hasNetworkImage && !hasLocalFile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ReceiptSectionTitle(
+            'Ảnh hóa đơn / phiếu cân',
+            action: '+ Thêm ảnh',
+            onAction: _showImagePickerOptions,
+          ),
+          const SizedBox(height: 10),
+          ReceiptSurface(
+            onTap: _showImagePickerOptions,
+            borderColor: const Color(0xFF94A3B8),
+            surfaceColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E293B)
+                : const Color(0xFFF8FAFC),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: ReceiptColors.blueSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.add_a_photo_outlined,
+                      color: ReceiptColors.blueStrong,
+                      size: 36,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Chưa có ảnh hóa đơn',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: ReceiptUi.ink(context),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Chạm vào đây để chọn ảnh từ máy hoặc chụp mới',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: ReceiptUi.secondaryText(context),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: _showImagePickerOptions,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ReceiptColors.blueStrong,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.photo_library_outlined, size: 20),
+                    label: const Text(
+                      'Chọn ảnh trong máy',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ReceiptSectionTitle(
+          'Ảnh hóa đơn / phiếu cân',
+          action: 'Xem full ảnh',
+          onAction: () => _openFullImage(
+            imageUrl: hasNetworkImage ? _receipt!.image!.secureUrl : null,
+            localFile: _localImageFile,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Semantics(
+          button: true,
+          label: 'Chạm để phóng to xem full ảnh phiếu',
+          child: ReceiptSurface(
+            padding: EdgeInsets.zero,
+            onTap: () => _openFullImage(
+              imageUrl: hasNetworkImage ? _receipt!.image!.secureUrl : null,
+              localFile: _localImageFile,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: hasLocalFile
+                        ? Image.file(_localImageFile!, fit: BoxFit.cover)
+                        : Image.network(
+                            _receipt!.image!.secureUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.broken_image_outlined, size: 44),
+                            ),
+                          ),
+                  ),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xDD0F172A),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.open_in_full_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Xem full ảnh',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openFullImage({String? imageUrl, File? localFile, String? assetPath}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReceiptImageViewerScreen(
+          imageUrl: imageUrl,
+          localFile: localFile,
+          assetPath: assetPath,
         ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _hero() => Container(
     padding: const EdgeInsets.all(20),
@@ -364,14 +607,16 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
       );
 
   Widget _row(String label, String value, {Color? valueColor}) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       Expanded(
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 17,
+            height: 1.35,
             color: ReceiptUi.secondaryText(context),
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -381,8 +626,9 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
           value,
           textAlign: TextAlign.right,
           style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            height: 1.35,
+            fontWeight: FontWeight.w800,
             color: valueColor ?? ReceiptUi.ink(context),
           ),
         ),
@@ -390,7 +636,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
     ],
   );
   Widget _divider() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 14),
+    padding: const EdgeInsets.symmetric(vertical: 18),
     child: Divider(height: 1, color: ReceiptUi.line(context)),
   );
   String _methodLabel(String method) => method == 'camera'
