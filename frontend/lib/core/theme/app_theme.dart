@@ -8,15 +8,15 @@ import 'package:flutter/services.dart';
 /// ╚══════════════════════════════════════════════════════════╝
 abstract final class AppTheme {
   // ── Seed colours ────────────────────────────────────────────
-  static const Color seed          = Color(0xFF7C3AED); // electric violet
-  static const Color neonCyan      = Color(0xFF22D3EE); // highlight / secondary
-  static const Color amberGold     = Color(0xFFF59E0B); // tertiary / XP
-  static const Color roseRed       = Color(0xFFEF4444); // danger / minesweeper
-  static const Color emeraldGreen  = Color(0xFF10B981); // success / win
+  static const Color seed = Color(0xFFEC4899); // vivid rose
+  static const Color neonCyan = Color(0xFF22D3EE); // highlight / secondary
+  static const Color amberGold = Color(0xFFF59E0B); // tertiary / XP
+  static const Color roseRed = Color(0xFFEF4444); // danger / minesweeper
+  static const Color emeraldGreen = Color(0xFF10B981); // success / win
 
   // ── Public API ───────────────────────────────────────────────
   static ThemeData get light => _build(Brightness.light);
-  static ThemeData get dark  => _build(Brightness.dark);
+  static ThemeData get dark => _build(Brightness.dark);
 
   // ── Builder ──────────────────────────────────────────────────
   static ThemeData _build(Brightness brightness) {
@@ -63,9 +63,7 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         elevation: isDark ? 0 : 2,
         margin: EdgeInsets.zero,
-        color: isDark
-            ? const Color(0xFF141B2D)
-            : scheme.surfaceContainerLow,
+        color: isDark ? const Color(0xFF141B2D) : scheme.surfaceContainerLow,
         shadowColor: isDark
             ? scheme.primary.withValues(alpha: 0.25)
             : Colors.black26,
@@ -149,6 +147,31 @@ abstract final class AppTheme {
         ),
       ),
 
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: isDark ? const Color(0xFF1B1630) : const Color(0xFFFFF8FC),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 17,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: scheme.error),
+        ),
+      ),
+
       // ── Text button ──────────────────────────────────────────
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -183,8 +206,7 @@ abstract final class AppTheme {
 
       // ── List tile ────────────────────────────────────────────
       listTileTheme: ListTileThemeData(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
         minVerticalPadding: 12,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         iconColor: scheme.primary,
@@ -211,26 +233,19 @@ abstract final class AppTheme {
               ? scheme.primary
               : scheme.surfaceContainerHigh,
         ),
-        trackOutlineColor:
-            WidgetStateProperty.all(scheme.outlineVariant),
+        trackOutlineColor: WidgetStateProperty.all(scheme.outlineVariant),
       ),
 
       // ── Chip ────────────────────────────────────────────────
       chipTheme: ChipThemeData(
         shape: StadiumBorder(
-          side: BorderSide(
-            color: scheme.outlineVariant,
-            width: 1,
-          ),
+          side: BorderSide(color: scheme.outlineVariant, width: 1),
         ),
         selectedColor: scheme.primaryContainer,
         backgroundColor: isDark
             ? const Color(0xFF141B2D)
             : scheme.surfaceContainerLow,
-        labelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -238,73 +253,73 @@ abstract final class AppTheme {
   // ── Light colour scheme ──────────────────────────────────────
   static const _lightScheme = ColorScheme(
     brightness: Brightness.light,
-    primary:              Color(0xFF6D28D9),
-    onPrimary:            Colors.white,
-    primaryContainer:     Color(0xFFEDE9FE),
-    onPrimaryContainer:   Color(0xFF2E1065),
-    secondary:            Color(0xFF0891B2),
-    onSecondary:          Colors.white,
-    secondaryContainer:   Color(0xFFCFF1FA),
-    onSecondaryContainer: Color(0xFF0C3040),
-    tertiary:             Color(0xFFD97706),
-    onTertiary:           Colors.white,
-    tertiaryContainer:    Color(0xFFFEF3C7),
-    onTertiaryContainer:  Color(0xFF3B1C00),
-    error:                Color(0xFFDC2626),
-    onError:              Colors.white,
-    errorContainer:       Color(0xFFFEE2E2),
-    onErrorContainer:     Color(0xFF7F1D1D),
-    surface:              Color(0xFFF7F7FC),
-    onSurface:            Color(0xFF181620),
-    onSurfaceVariant:     Color(0xFF5F6472),
-    outline:              Color(0xFF7180A0),
-    outlineVariant:       Color(0xFFD8DCE7),
-    surfaceContainerLowest:  Colors.white,
-    surfaceContainerLow:     Color(0xFFFFFFFF),
-    surfaceContainer:        Color(0xFFF3F4F8),
-    surfaceContainerHigh:    Color(0xFFE7E9F0),
+    primary: Color(0xFFDB2777),
+    onPrimary: Colors.white,
+    primaryContainer: Color(0xFFFCE7F3),
+    onPrimaryContainer: Color(0xFF500724),
+    secondary: Color(0xFF7C3AED),
+    onSecondary: Colors.white,
+    secondaryContainer: Color(0xFFEDE9FE),
+    onSecondaryContainer: Color(0xFF2E1065),
+    tertiary: Color(0xFFD97706),
+    onTertiary: Colors.white,
+    tertiaryContainer: Color(0xFFFEF3C7),
+    onTertiaryContainer: Color(0xFF3B1C00),
+    error: Color(0xFFDC2626),
+    onError: Colors.white,
+    errorContainer: Color(0xFFFEE2E2),
+    onErrorContainer: Color(0xFF7F1D1D),
+    surface: Color(0xFFFFF8FC),
+    onSurface: Color(0xFF181620),
+    onSurfaceVariant: Color(0xFF5F6472),
+    outline: Color(0xFF7180A0),
+    outlineVariant: Color(0xFFD8DCE7),
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: Color(0xFFFFFFFF),
+    surfaceContainer: Color(0xFFF3F4F8),
+    surfaceContainerHigh: Color(0xFFE7E9F0),
     surfaceContainerHighest: Color(0xFFD8DCE7),
-    inverseSurface:       Color(0xFF181620),
-    onInverseSurface:     Color(0xFFF7F7FC),
-    inversePrimary:       Color(0xFFC4B5FD),
-    shadow:               Color(0xFF000000),
-    scrim:                Color(0xFF000000),
+    inverseSurface: Color(0xFF181620),
+    onInverseSurface: Color(0xFFF7F7FC),
+    inversePrimary: Color(0xFFC4B5FD),
+    shadow: Color(0xFF000000),
+    scrim: Color(0xFF000000),
   );
 
   // ── Dark colour scheme ───────────────────────────────────────
   static const _darkScheme = ColorScheme(
     brightness: Brightness.dark,
-    primary:              Color(0xFFA78BFA), // soft violet
-    onPrimary:            Color(0xFF1E0A3C),
-    primaryContainer:     Color(0xFF3B1F6E),
-    onPrimaryContainer:   Color(0xFFEDE9FE),
-    secondary:            Color(0xFF22D3EE), // neon cyan
-    onSecondary:          Color(0xFF002B38),
-    secondaryContainer:   Color(0xFF004C5E),
-    onSecondaryContainer: Color(0xFFB2F5FF),
-    tertiary:             Color(0xFFFBBF24), // gold
-    onTertiary:           Color(0xFF2D1900),
-    tertiaryContainer:    Color(0xFF4A2E00),
-    onTertiaryContainer:  Color(0xFFFDE68A),
-    error:                Color(0xFFFCA5A5),
-    onError:              Color(0xFF7F1D1D),
-    errorContainer:       Color(0xFF991B1B),
-    onErrorContainer:     Color(0xFFFFE4E1),
-    surface:              Color(0xFF080C18), // deep midnight
-    onSurface:            Color(0xFFE8E6FF),
-    onSurfaceVariant:     Color(0xFF9B9EC8),
-    outline:              Color(0xFF5C6080),
-    outlineVariant:       Color(0xFF252847),
-    surfaceContainerLowest:  Color(0xFF04060F),
-    surfaceContainerLow:     Color(0xFF0D1326),
-    surfaceContainer:        Color(0xFF141B2D),
-    surfaceContainerHigh:    Color(0xFF1C2438),
-    surfaceContainerHighest: Color(0xFF252D44),
-    inverseSurface:       Color(0xFFE8E6FF),
-    onInverseSurface:     Color(0xFF0F0A1E),
-    inversePrimary:       Color(0xFF6D28D9),
-    shadow:               Color(0xFF000000),
-    scrim:                Color(0xFF000000),
+    primary: Color(0xFFF472B6), // electric rose
+    onPrimary: Color(0xFF500724),
+    primaryContainer: Color(0xFF831843),
+    onPrimaryContainer: Color(0xFFFCE7F3),
+    secondary: Color(0xFFC4B5FD), // soft violet
+    onSecondary: Color(0xFF2E1065),
+    secondaryContainer: Color(0xFF4C1D95),
+    onSecondaryContainer: Color(0xFFEDE9FE),
+    tertiary: Color(0xFFFBBF24), // gold
+    onTertiary: Color(0xFF2D1900),
+    tertiaryContainer: Color(0xFF4A2E00),
+    onTertiaryContainer: Color(0xFFFDE68A),
+    error: Color(0xFFFCA5A5),
+    onError: Color(0xFF7F1D1D),
+    errorContainer: Color(0xFF991B1B),
+    onErrorContainer: Color(0xFFFFE4E1),
+    surface: Color(0xFF0D0918), // deep plum midnight
+    onSurface: Color(0xFFE8E6FF),
+    onSurfaceVariant: Color(0xFF9B9EC8),
+    outline: Color(0xFF5C6080),
+    outlineVariant: Color(0xFF252847),
+    surfaceContainerLowest: Color(0xFF04060F),
+    surfaceContainerLow: Color(0xFF151024),
+    surfaceContainer: Color(0xFF1B1630),
+    surfaceContainerHigh: Color(0xFF251D3D),
+    surfaceContainerHighest: Color(0xFF30264A),
+    inverseSurface: Color(0xFFE8E6FF),
+    onInverseSurface: Color(0xFF0F0A1E),
+    inversePrimary: Color(0xFF6D28D9),
+    shadow: Color(0xFF000000),
+    scrim: Color(0xFF000000),
   );
 
   // ── Type scale ───────────────────────────────────────────────
@@ -408,8 +423,9 @@ class GradientText extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderMask(
       blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) =>
-          gradient.createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+      shaderCallback: (bounds) => gradient.createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
       child: Text(text, style: style, textAlign: textAlign),
     );
   }
@@ -441,12 +457,14 @@ class GlassCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: br,
-          color: backgroundColor ??
+          color:
+              backgroundColor ??
               (isDark
                   ? const Color(0xFF141B2D).withValues(alpha: 0.85)
                   : Colors.white.withValues(alpha: 0.7)),
           border: Border.all(
-            color: borderColor ??
+            color:
+                borderColor ??
                 (isDark
                     ? const Color(0xFFA78BFA).withValues(alpha: 0.2)
                     : Colors.white.withValues(alpha: 0.6)),
@@ -526,30 +544,26 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: style,
-      child: child,
-    );
+    return FilledButton(onPressed: onPressed, style: style, child: child);
   }
 }
 
 /// Khoảng cách / padding chuẩn hoá 8dp grid.
 abstract final class AppSpacing {
-  static const double xs  = 4;
-  static const double sm  = 8;
-  static const double md  = 12;
-  static const double lg  = 16;
-  static const double xl  = 20;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 20;
   static const double xxl = 24;
   static const double xxxl = 32;
 }
 
 /// Thang radius.
 abstract final class AppRadius {
-  static const Radius sm  = Radius.circular(8);
-  static const Radius md  = Radius.circular(12);
-  static const Radius lg  = Radius.circular(16);
-  static const Radius xl  = Radius.circular(20);
+  static const Radius sm = Radius.circular(8);
+  static const Radius md = Radius.circular(12);
+  static const Radius lg = Radius.circular(16);
+  static const Radius xl = Radius.circular(20);
   static const Radius xxl = Radius.circular(28);
 }

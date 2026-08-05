@@ -648,7 +648,7 @@ class _ReceiptCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => _ModuleCard(
-    minHeight: 238,
+        minHeight: 280,
     title: 'Sổ ghe',
     subtitle: 'Phiếu nhập & thống kê trấu',
     eyebrow: 'CÔNG VIỆC',
@@ -683,7 +683,7 @@ class _GameCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => _ModuleCard(
-    minHeight: 220,
+        minHeight: 280,
     title: 'Game',
     subtitle: '6 trò chơi • không giới hạn',
     eyebrow: 'GIẢI TRÍ',
