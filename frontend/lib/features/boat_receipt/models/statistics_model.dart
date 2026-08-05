@@ -22,6 +22,14 @@ class SummaryItem {
       avgPricePerKg: json['avgPricePerKg'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'trips': trips,
+    'weightKg': weightKg,
+    'weightTons': weightTons,
+    'totalAmount': totalAmount,
+    'avgPricePerKg': avgPricePerKg,
+  };
 }
 
 class HomeSummaryModel {
@@ -36,6 +44,11 @@ class HomeSummaryModel {
       month: SummaryItem.fromJson(json['month'] ?? {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'today': today.toJson(),
+    'month': month.toJson(),
+  };
 }
 
 class BoatGroupStat {

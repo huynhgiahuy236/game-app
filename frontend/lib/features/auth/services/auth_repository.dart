@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 import '../../../core/network/api_client.dart';
 import '../models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthRepository extends ChangeNotifier {
+  static const Duration _startupWait = Duration(seconds: 12);
   UserModel? _currentUser;
   bool _isLoading = true;
   bool _isAuthenticated = false;
@@ -23,13 +25,15 @@ class AuthRepository extends ChangeNotifier {
       final token = await _apiClient.getAccessToken();
       if (token != null && token.isNotEmpty) {
         try {
-          final userData = await _apiClient.get('/auth/me');
+          final userData = await _apiClient
+              .get('/auth/me')
+              .timeout(_startupWait);
           _currentUser = UserModel.fromJson(userData);
         } catch (_) {}
       } else {
         // Auto-login with default credentials if available
         try {
-          await login('admin', 'chimuoi@123');
+          await login('admin', 'chimuoi@123').timeout(_startupWait);
         } catch (_) {}
       }
     } catch (_) {
@@ -45,10 +49,10 @@ class AuthRepository extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final resData = await _apiClient.post('/auth/login', body: {
-        'username': username,
-        'password': password,
-      });
+      final resData = await _apiClient.post(
+        '/auth/login',
+        body: {'username': username, 'password': password},
+      );
 
       final accessToken = resData['accessToken'];
       final refreshToken = resData['refreshToken'];
@@ -67,7 +71,10 @@ class AuthRepository extends ChangeNotifier {
     try {
       final refreshToken = await _apiClient.getRefreshToken();
       if (refreshToken != null) {
-        await _apiClient.post('/auth/logout', body: {'refreshToken': refreshToken});
+        await _apiClient.post(
+          '/auth/logout',
+          body: {'refreshToken': refreshToken},
+        );
       }
     } catch (_) {}
 

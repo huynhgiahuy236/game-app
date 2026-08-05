@@ -94,7 +94,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+      backgroundColor: isDark
+          ? const Color(0xFF171222)
+          : const Color(0xFFF5F0FF),
       body: IndexedStack(
         index: _currentBottomNavIndex,
         children: [
@@ -109,23 +111,29 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           height: 70,
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          indicatorColor: const Color(0xFF0284C7),
+          backgroundColor: isDark ? const Color(0xFF241D32) : Colors.white,
+          indicatorColor: const Color(0xFFE9E0FF),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => TextStyle(
               fontSize: 15,
-              fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.w500,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.bold
+                  : FontWeight.w500,
               color: states.contains(WidgetState.selected)
-                  ? (isDark ? Colors.white : const Color(0xFF0284C7))
-                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                  ? (isDark ? Colors.white : const Color(0xFF6542B5))
+                  : (isDark
+                        ? const Color(0xFFC9BDDC)
+                        : const Color(0xFF716A7F)),
             ),
           ),
           iconTheme: WidgetStateProperty.resolveWith(
             (states) => IconThemeData(
               size: 26,
               color: states.contains(WidgetState.selected)
-                  ? Colors.white
-                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                  ? const Color(0xFF6542B5)
+                  : (isDark
+                        ? const Color(0xFFC9BDDC)
+                        : const Color(0xFF716A7F)),
             ),
           ),
         ),
@@ -139,12 +147,18 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.grid_view_rounded),
-              selectedIcon: Icon(Icons.grid_view_rounded, color: Colors.white),
+              selectedIcon: Icon(
+                Icons.grid_view_rounded,
+                color: Color(0xFF6542B5),
+              ),
               label: 'Trang chủ',
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_rounded),
-              selectedIcon: Icon(Icons.settings_rounded, color: Colors.white),
+              selectedIcon: Icon(
+                Icons.settings_rounded,
+                color: Color(0xFF6542B5),
+              ),
               label: 'Cài đặt',
             ),
           ],
@@ -164,11 +178,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         subtitle: 'Quản lý phiếu & Thống kê trấu',
         icon: Icons.directions_boat_filled_rounded,
         gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF0369A1)],
+          colors: [Color(0xFF6542B5), Color(0xFF9A7BE1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        accentColor: const Color(0xFF38BDF8),
+        accentColor: const Color(0xFF6542B5),
         onTap: () {
           Navigator.push(
             context,
@@ -187,11 +201,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         subtitle: 'Caro, 2048, Sudoku, Đổ mìn, Cờ tỷ phú',
         icon: Icons.sports_esports_rounded,
         gradient: const LinearGradient(
-          colors: [Color(0xFF2E1065), Color(0xFF0D9488)],
+          colors: [Color(0xFF8B5CF6), Color(0xFFEC8FC7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        accentColor: const Color(0xFF2DD4BF),
+        accentColor: const Color(0xFF9A5FD0),
         onTap: () {
           Navigator.push(
             context,
@@ -223,37 +237,60 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+      backgroundColor: isDark
+          ? const Color(0xFF171222)
+          : const Color(0xFFF5F0FF),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        backgroundColor: isDark
+            ? const Color(0xFF171222)
+            : const Color(0xFFF5F0FF),
         elevation: 0,
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.2),
+                color: const Color(0xFFE9E0FF),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.face_5_rounded, size: 28, color: Color(0xFF38BDF8)),
+              child: const Icon(
+                Icons.face_5_rounded,
+                size: 28,
+                color: Color(0xFF6542B5),
+              ),
             ),
             const SizedBox(width: 12),
             Text(
-              'Chào $displayName',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              'Ứng dụng của mình',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF252033),
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 28, color: Color(0xFFF43F5E)),
+            icon: const Icon(
+              Icons.logout_rounded,
+              size: 28,
+              color: Color(0xFFF43F5E),
+            ),
             tooltip: 'Đăng xuất',
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   backgroundColor: const Color(0xFF1E293B),
-                  title: const Text('Đăng xuất', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                  title: const Text(
+                    'Đăng xuất',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                   content: const Text(
                     'Đăng xuất khỏi ứng dụng?',
                     style: TextStyle(fontSize: 18, color: Color(0xFFCBD5E1)),
@@ -261,12 +298,27 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Hủy', style: TextStyle(fontSize: 18, color: Color(0xFF94A3B8))),
+                      child: const Text(
+                        'Hủy',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
                     ),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
-                      child: const Text('Đăng xuất', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                      ),
+                      child: const Text(
+                        'Đăng xuất',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -282,21 +334,78 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       ),
       body: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-        itemCount: allModules.length,
+        itemCount: allModules.length + 1,
         separatorBuilder: (_, index) => const SizedBox(height: 18),
         itemBuilder: (context, index) {
-          final item = allModules[index];
+          if (index == 0) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6542B5), Color(0xFF9A7BE1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6542B5).withValues(alpha: 0.24),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chào $displayName 👋',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      const Text(
+                        'Hôm nay mình muốn làm gì?',
+                        style: TextStyle(
+                          color: Color(0xFFF2ECFF),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Ứng dụng của mình',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF252033),
+                  ),
+                ),
+              ],
+            );
+          }
+          final item = allModules[index - 1];
           final isPinned = _pinnedModuleIds.contains(item.id);
 
           return Container(
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: isDark ? const Color(0xFF241D32) : Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
                   color: isDark
                       ? item.accentColor.withValues(alpha: 0.25)
-                      : Colors.black.withValues(alpha: 0.06),
+                      : const Color(0xFF6542B5).withValues(alpha: 0.10),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -304,7 +413,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               border: Border.all(
                 color: isPinned
                     ? item.accentColor
-                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                    : (isDark
+                          ? const Color(0xFF493B62)
+                          : const Color(0xFFE3D8F7)),
                 width: isPinned ? 2.5 : 1.5,
               ),
             ),
@@ -320,10 +431,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: item.accentColor.withValues(alpha: isDark ? 0.2 : 0.12),
+                          color: item.accentColor.withValues(
+                            alpha: isDark ? 0.2 : 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: Icon(item.icon, size: 38, color: item.accentColor),
+                        child: Icon(
+                          item.icon,
+                          size: 38,
+                          color: item.accentColor,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -341,14 +458,22 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                                     style: TextStyle(
                                       fontSize: 21,
                                       fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF252033),
                                     ),
                                   ),
                                 ),
                                 IconButton(
                                   icon: Icon(
-                                    isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                                    color: isPinned ? item.accentColor : (isDark ? Colors.white54 : const Color(0xFF94A3B8)),
+                                    isPinned
+                                        ? Icons.push_pin_rounded
+                                        : Icons.push_pin_outlined,
+                                    color: isPinned
+                                        ? item.accentColor
+                                        : (isDark
+                                              ? Colors.white54
+                                              : const Color(0xFF9B91AA)),
                                     size: 24,
                                   ),
                                   onPressed: () => _togglePin(item.id),
@@ -364,7 +489,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 15,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                color: isDark
+                                    ? const Color(0xFFC9BDDC)
+                                    : const Color(0xFF716A7F),
                               ),
                             ),
                           ],
@@ -373,7 +500,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       const SizedBox(width: 8),
                       Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                        color: isDark
+                            ? const Color(0xFFC9BDDC)
+                            : const Color(0xFF9B91AA),
                         size: 20,
                       ),
                     ],

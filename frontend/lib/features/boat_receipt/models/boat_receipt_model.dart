@@ -70,7 +70,8 @@ class BoatReceiptModel {
   });
 
   double get weightTons => weightKg / 1000.0;
-  int get computedTotalAmount => totalAmount > 0 ? totalAmount : weightKg * pricePerKg;
+  int get computedTotalAmount =>
+      totalAmount > 0 ? totalAmount : weightKg * pricePerKg;
 
   factory BoatReceiptModel.fromJson(Map<String, dynamic> json) {
     final wKg = json['weightKg'] ?? 0;
@@ -79,17 +80,37 @@ class BoatReceiptModel {
     return BoatReceiptModel(
       id: json['id'] ?? json['_id'] ?? '',
       clientId: json['clientId'] ?? '',
-      receiptDate: DateTime.tryParse(json['receiptDate'] ?? '') ?? DateTime.now(),
+      receiptDate:
+          DateTime.tryParse(json['receiptDate'] ?? '') ?? DateTime.now(),
       boatNumber: json['boatNumber'] ?? '',
       weightKg: wKg,
       pricePerKg: pKg,
       totalAmount: totAmt,
       note: json['note'] ?? '',
-      image: json['image'] != null ? ReceiptImage.fromJson(json['image']) : null,
+      image: json['image'] != null
+          ? ReceiptImage.fromJson(json['image'])
+          : null,
       inputMethod: json['input']?['method'] ?? 'manual',
       wasEdited: json['verification']?['wasEdited'] ?? false,
-      editedFields: List<String>.from(json['verification']?['editedFields'] ?? []),
+      editedFields: List<String>.from(
+        json['verification']?['editedFields'] ?? [],
+      ),
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'clientId': clientId,
+    'receiptDate': receiptDate.toIso8601String(),
+    'boatNumber': boatNumber,
+    'weightKg': weightKg,
+    'pricePerKg': pricePerKg,
+    'totalAmount': totalAmount,
+    'note': note,
+    if (image != null) 'image': image!.toJson(),
+    'input': {'method': inputMethod},
+    'verification': {'wasEdited': wasEdited, 'editedFields': editedFields},
+    'createdAt': createdAt.toIso8601String(),
+  };
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/boat_receipt_model.dart';
 import '../services/boat_receipt_repository.dart';
+import '../services/receipt_cache.dart';
 import 'receipt_detail_screen.dart';
 import 'receipt_ui.dart';
 
@@ -15,22 +16,40 @@ class ReceiptHistoryScreen extends StatefulWidget {
 
 class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
   final _repository = BoatReceiptRepository();
+  final _cache = ReceiptCache();
   List<BoatReceiptModel> _receipts = [];
+  List<BoatReceiptModel> _cachedReceipts = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _filterType = 'all';
   DateTime? _selectedDate;
   String? _selectedBoat;
+  bool _usingCachedData = false;
+  DateTime? _cacheSavedAt;
 
   @override
   void initState() {
     super.initState();
-    _fetchHistory();
+    _bootstrap();
   }
 
-  Future<void> _fetchHistory() async {
+  Future<void> _bootstrap() async {
+    final cached = await _cache.loadReceipts();
+    if (cached != null && mounted) {
+      setState(() {
+        _receipts = cached.$1;
+        _cachedReceipts = cached.$1;
+        _cacheSavedAt = cached.$2;
+        _usingCachedData = true;
+        _isLoading = false;
+      });
+    }
+    await _fetchHistory(showSpinner: cached == null);
+  }
+
+  Future<void> _fetchHistory({bool showSpinner = true}) async {
     setState(() {
-      _isLoading = true;
+      _isLoading = showSpinner;
       _errorMessage = null;
     });
     try {
@@ -56,9 +75,26 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
         to: to,
         boatNumber: _selectedBoat,
       );
-      if (mounted) setState(() => _receipts = data);
+      if (mounted) {
+        setState(() {
+          _receipts = data;
+          _usingCachedData = false;
+        });
+      }
+      if (_filterType == 'all' && _selectedBoat == null) {
+        _cachedReceipts = data;
+        await _cache.saveReceipts(data);
+      }
     } catch (error) {
-      if (mounted) setState(() => _errorMessage = error.toString());
+      if (mounted) {
+        setState(() {
+          if (_receipts.isEmpty) {
+            _errorMessage = error.toString();
+          } else {
+            _usingCachedData = true;
+          }
+        });
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -78,6 +114,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     body: Column(
       children: [
         _compactFilters(),
+        if (_usingCachedData) _cachedDataNotice(),
         Expanded(
           child: _isLoading
               ? const Center(
@@ -111,46 +148,149 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     ),
   );
 
+  Widget _cachedDataNotice() => Container(
+    margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF4D6),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFF2D38A)),
+    ),
+    child: Row(
+      children: [
+        const Icon(
+          Icons.cloud_off_outlined,
+          size: 22,
+          color: Color(0xFF9A6500),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            _cacheSavedAt == null
+                ? 'Đang xem dữ liệu gần nhất'
+                : 'Dữ liệu lúc ${_two(_cacheSavedAt!.hour)}:${_two(_cacheSavedAt!.minute)}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF704B00),
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => _fetchHistory(),
+          child: const Text('Thử lại'),
+        ),
+      ],
+    ),
+  );
+
+  String _two(int value) => value.toString().padLeft(2, '0');
+
   Widget _compactFilters() => Container(
     color: ReceiptUi.surface(context),
     padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-    child: SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: OutlinedButton.icon(
-        onPressed: _showFilters,
-        icon: const Icon(Icons.tune_rounded, size: 28),
-        label: Align(
-          alignment: Alignment.centerLeft,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Lọc phiếu',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _quickBoat('Tất cả', null, ReceiptColors.blue)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _quickBoat('DT-2764', 'DT-2764', ReceiptColors.blueStrong),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _quickBoat('AG-26911', 'AG-26911', ReceiptColors.green),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 58,
+          child: OutlinedButton.icon(
+            onPressed: _showFilters,
+            icon: const Icon(Icons.tune_rounded, size: 26),
+            label: Align(
+              alignment: Alignment.centerLeft,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lọc thêm theo thời gian',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                  ),
+                  Text(
+                    _filterSummary(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: ReceiptUi.secondaryText(context),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                _filterSummary(),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: ReceiptUi.secondaryText(context),
-                ),
+            ),
+            style: OutlinedButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              foregroundColor: ReceiptColors.ink,
+              side: BorderSide(color: ReceiptUi.line(context)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
+            ),
           ),
         ),
-        style: OutlinedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          foregroundColor: ReceiptColors.ink,
-          side: BorderSide(color: ReceiptUi.line(context)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+      ],
+    ),
+  );
+
+  Widget _quickBoat(String label, String? boat, Color color) {
+    final selected = _selectedBoat == boat;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: boat == null ? 'Xem tất cả ghe' : 'Lọc nhanh ghe $boat',
+      child: InkWell(
+        onTap: () {
+          if (_selectedBoat == boat) return;
+          setState(() {
+            _selectedBoat = boat;
+            if (_cachedReceipts.isNotEmpty) {
+              _receipts = boat == null
+                  ? _cachedReceipts
+                  : _cachedReceipts
+                        .where((item) => item.boatNumber == boat)
+                        .toList();
+              _usingCachedData = true;
+            }
+          });
+          _fetchHistory(showSpinner: _cachedReceipts.isEmpty);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? color : color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.65)),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: selected ? Colors.white : color,
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   String _filterSummary() {
     final boat = _selectedBoat ?? 'Tất cả ghe';
@@ -512,127 +652,149 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
   }
 
   Widget _receiptCard(BoatReceiptModel receipt) {
+    Future<void> openDetails() async {
+      final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
+        ),
+      );
+      if (changed == true) _fetchHistory();
+    }
+
+    final statusLabel = receipt.wasEdited
+        ? 'Đã chỉnh sửa'
+        : receipt.inputMethod == 'camera'
+        ? 'Chụp phiếu'
+        : 'Nhập thủ công';
+    final statusColor = receipt.wasEdited
+        ? const Color(0xFFF59E0B)
+        : ReceiptColors.blue;
+    final statusBackground = receipt.wasEdited
+        ? const Color(0xFFFFE9B8)
+        : ReceiptColors.blueSoft;
     final isAg = receipt.boatNumber.toUpperCase().startsWith('AG');
-    final accent = isAg ? ReceiptColors.green : ReceiptColors.blue;
-    final soft = isAg ? const Color(0xFFDCFCE7) : ReceiptColors.blueSoft;
+    final boatColor = isAg ? ReceiptColors.green : ReceiptColors.blueStrong;
     return ReceiptSurface(
-      borderColor: accent.withValues(alpha: 0.55),
-      surfaceColor: soft,
-      onTap: () async {
-        final changed = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReceiptDetailScreen(receiptId: receipt.id),
-          ),
-        );
-        if (changed == true) _fetchHistory();
-      },
+      borderColor: boatColor.withValues(alpha: 0.55),
+      surfaceColor: ReceiptUi.surface(context),
+      onTap: openDetails,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: soft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.directions_boat_outlined, color: accent),
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      receipt.boatNumber,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                      'KHỐI LƯỢNG',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: ReceiptUi.secondaryText(context),
                       ),
                     ),
-                    const SizedBox(height: 3),
                     Text(
-                      AppFormatters.formatDate(receipt.receiptDate),
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: ReceiptUi.secondaryText(context),
+                      AppFormatters.formatKgToTons(receipt.weightKg),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: ReceiptColors.ink,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(color: ReceiptUi.line(context), height: 1),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _value(
-                  'Khối lượng',
-                  AppFormatters.formatKgToTons(receipt.weightKg),
-                  ReceiptColors.blueStrong,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 8,
                 ),
-              ),
-              if (receipt.computedTotalAmount > 0)
-                Expanded(
-                  child: _value(
-                    'Thành tiền',
-                    AppFormatters.formatCurrency(receipt.computedTotalAmount),
-                    ReceiptColors.green,
-                    alignEnd: true,
+                decoration: BoxDecoration(
+                  color: statusBackground,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
                   ),
                 ),
+              ),
             ],
           ),
-          if (receipt.note.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                receipt.note,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: ReceiptUi.secondaryText(context),
-                ),
+          const SizedBox(height: 12),
+          _infoRow('Số ghe', receipt.boatNumber, valueColor: boatColor),
+          _infoRow('Ngày cân', AppFormatters.formatDate(receipt.receiptDate)),
+          _infoRow(
+            'Đơn giá',
+            receipt.pricePerKg > 0
+                ? AppFormatters.formatPricePerKg(receipt.pricePerKg)
+                : 'Chưa nhập',
+          ),
+          _infoRow(
+            'Thành tiền',
+            receipt.computedTotalAmount > 0
+                ? AppFormatters.formatFullCurrency(receipt.computedTotalAmount)
+                : 'Chưa có',
+            valueColor: receipt.computedTotalAmount > 0
+                ? ReceiptColors.green
+                : null,
+          ),
+          if (receipt.note.isNotEmpty) ...[_infoRow('Ghi chú', receipt.note)],
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: openDetails,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: ReceiptColors.blueStrong,
+              side: const BorderSide(color: ReceiptColors.blue),
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-          ],
+            child: const Text(
+              'Xem chi tiết phiếu',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _value(
-    String label,
-    String value,
-    Color color, {
-    bool alignEnd = false,
-  }) => Column(
-    crossAxisAlignment: alignEnd
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: TextStyle(fontSize: 14, color: ReceiptUi.secondaryText(context)),
-      ),
-      const SizedBox(height: 3),
-      Text(
-        value,
-        textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: color,
+  Widget _infoRow(String label, String value, {Color? valueColor}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 9),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              color: ReceiptUi.secondaryText(context),
+            ),
+          ),
         ),
-      ),
-    ],
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: valueColor ?? ReceiptColors.ink,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

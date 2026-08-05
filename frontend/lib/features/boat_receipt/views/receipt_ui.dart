@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
 abstract final class ReceiptColors {
-  static const blue = Color(0xFF0369A1);
-  static const blueStrong = Color(0xFF075985);
-  static const blueSoft = Color(0xFFBAE6FD);
+  // Lavender palette inspired by the reference UI. Existing names are kept so
+  // every receipt screen picks up the new identity consistently.
+  static const blue = Color(0xFF7C5CC4);
+  static const blueStrong = Color(0xFF6542B5);
+  static const blueSoft = Color(0xFFE9E0FF);
   static const green = Color(0xFF047857);
   static const greenSoft = Color(0xFFBBF7D0);
   static const amber = Color(0xFFB45309);
   static const red = Color(0xFFB91C1C);
-  static const ink = Color(0xFF0F172A);
-  static const muted = Color(0xFF64748B);
-  static const canvas = Color(0xFFF8FAFC);
-  static const line = Color(0xFFE2E8F0);
-  static const darkCanvas = Color(0xFF0B1220);
-  static const darkSurface = Color(0xFF151F2E);
-  static const darkLine = Color(0xFF2A3A4F);
+  static const ink = Color(0xFF252033);
+  static const muted = Color(0xFF716A7F);
+  static const canvas = Color(0xFFF5F0FF);
+  static const line = Color(0xFFE3D8F7);
+  static const darkCanvas = Color(0xFF171222);
+  static const darkSurface = Color(0xFF241D32);
+  static const darkLine = Color(0xFF493B62);
 }
 
 abstract final class ReceiptUi {

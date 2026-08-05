@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -24,6 +25,8 @@ class ApiClient {
 
   static const String _keyAccessToken = 'jwt_access_token';
   static const String _keyRefreshToken = 'jwt_refresh_token';
+  static const Duration _requestTimeout = Duration(seconds: 25);
+  static const Duration _uploadTimeout = Duration(minutes: 2);
 
   Future<String?> getAccessToken() async {
     return await _storage.read(key: _keyAccessToken);
@@ -60,7 +63,7 @@ class ApiClient {
       final headers = await _getHeaders();
       final url = Uri.parse('${EnvConfig.apiBaseUrl}$endpoint');
       return await _client.get(url, headers: headers);
-    });
+    }, retryOnTimeout: true);
   }
 
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
@@ -120,9 +123,9 @@ class ApiClient {
         request.files.add(multipartFile);
       }
 
-      final streamedResponse = await request.send();
+      final streamedResponse = await request.send().timeout(_uploadTimeout);
       return await http.Response.fromStream(streamedResponse);
-    });
+    }, timeout: _uploadTimeout);
   }
 
   MediaType _imageMediaType(String path) {
@@ -148,15 +151,28 @@ class ApiClient {
   }
 
   Future<dynamic> _sendRequest(
-    Future<http.Response> Function() requestFn,
-  ) async {
+    Future<http.Response> Function() requestFn, {
+    Duration timeout = _requestTimeout,
+    bool retryOnTimeout = false,
+  }) async {
     try {
-      var response = await requestFn();
+      http.Response response;
+      try {
+        response = await requestFn().timeout(timeout);
+      } on TimeoutException {
+        if (!retryOnTimeout) rethrow;
+
+        // Render's free service can be asleep. The first request wakes it up;
+        // retrying a safe GET lets the app recover without asking the user to
+        // open the Render URL manually.
+        await Future<void>.delayed(const Duration(seconds: 2));
+        response = await requestFn().timeout(timeout);
+      }
 
       if (response.statusCode == 401) {
         final refreshed = await refreshTokens();
         if (refreshed) {
-          response = await requestFn();
+          response = await requestFn().timeout(timeout);
         }
       }
 
@@ -164,6 +180,11 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
         'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc bật server.',
+      );
+    } on TimeoutException {
+      throw ApiException(
+        'Máy chủ đang khởi động lâu hơn dự kiến. Vui lòng nhấn Thử lại sau ít phút.',
+        408,
       );
     } on ApiException {
       rethrow;
@@ -178,11 +199,13 @@ class ApiClient {
       if (refreshToken == null) return false;
 
       final url = Uri.parse('${EnvConfig.apiBaseUrl}/auth/refresh');
-      final response = await _client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refreshToken': refreshToken}),
-      );
+      final response = await _client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refreshToken': refreshToken}),
+          )
+          .timeout(_requestTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

@@ -6,8 +6,6 @@ import 'receipt_ui.dart';
 
 enum _Period { week, month, year }
 
-enum _StatsPage { overview, boats }
-
 class ReceiptStatisticsScreen extends StatefulWidget {
   const ReceiptStatisticsScreen({super.key, this.initialTabIndex = 0});
   final int initialTabIndex;
@@ -20,7 +18,6 @@ class ReceiptStatisticsScreen extends StatefulWidget {
 class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
   final _repository = BoatReceiptRepository();
   late _Period _period;
-  _StatsPage _page = _StatsPage.overview;
   DateTime _anchor = DateTime.now();
   Map<String, dynamic>? _data;
   Map<String, dynamic>? _previousData;
@@ -161,105 +158,6 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     ),
   );
 
-  // ignore: unused_element
-  Widget _topControls() => Container(
-    color: ReceiptUi.surface(context),
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-    child: Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: ReceiptUi.canvas(context),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _pageButton(
-                  'Tổng quan',
-                  Icons.dashboard_outlined,
-                  _StatsPage.overview,
-                ),
-              ),
-              Expanded(
-                child: _pageButton(
-                  'Theo ghe',
-                  Icons.directions_boat_outlined,
-                  _StatsPage.boats,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: ReceiptUi.canvas(context),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Expanded(child: _periodButton('Tuần', _Period.week)),
-              Expanded(child: _periodButton('Tháng', _Period.month)),
-              Expanded(child: _periodButton('Năm', _Period.year)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            _arrow(Icons.chevron_left_rounded, 'Kỳ trước', -1),
-            Expanded(
-              child: Text(
-                _periodLabel(),
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
-              ),
-            ),
-            _arrow(Icons.chevron_right_rounded, 'Kỳ sau', 1),
-          ],
-        ),
-      ],
-    ),
-  );
-
-  Widget _pageButton(String label, IconData icon, _StatsPage value) {
-    final selected = _page == value;
-    return InkWell(
-      onTap: () => setState(() => _page = value),
-      borderRadius: BorderRadius.circular(11),
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: selected ? ReceiptColors.blueStrong : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 21,
-              color: selected ? Colors.white : ReceiptUi.secondaryText(context),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                color: selected ? Colors.white : ReceiptColors.ink,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _periodButton(String label, _Period value) {
     final selected = _period == value;
     return InkWell(
@@ -322,7 +220,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
           Icons.directions_boat_outlined,
           'Xem theo từng ghe',
           '${boats.length} ghe trong kỳ đang chọn',
-          () => _showBoats(data, boats),
+          () => _openBoatsScreen(data, boats),
         ),
       ],
     );
@@ -387,26 +285,130 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     _breakdown(data),
   ]);
 
-  Future<void> _showBoats(
+  Future<void> _openBoatsScreen(
     Map<String, dynamic> data,
     List<Map<String, dynamic>> boats,
-  ) => _showStatsSheet('Thống kê theo ghe', [
-    _boatHeader(boats, data),
-    const SizedBox(height: 12),
-    if (boats.isEmpty)
-      const ReceiptEmptyState(
-        icon: Icons.directions_boat_outlined,
-        title: 'Chưa có chuyến ghe',
-        message: 'Kỳ này chưa có phiếu nhập.',
-      )
-    else
-      ...boats.map(
-        (boat) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _boatCard(boat, _int(data['totalKg'])),
+  ) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (routeContext) => Scaffold(
+        backgroundColor: ReceiptUi.canvas(routeContext),
+        appBar: ReceiptUi.appBar(
+          routeContext,
+          'Thống kê theo ghe',
+          subtitle: _periodLabel(),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+          children: [
+            _boatHeader(boats, data),
+            const SizedBox(height: 12),
+            if (boats.isEmpty)
+              const ReceiptEmptyState(
+                icon: Icons.directions_boat_outlined,
+                title: 'Chưa có chuyến ghe',
+                message: 'Kỳ này chưa có phiếu nhập.',
+              )
+            else
+              ...boats.map(
+                (boat) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _boatCard(
+                    boat,
+                    _int(data['totalKg']),
+                    onTap: () => _openBoatDetails(boat, data),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
-  ]);
+    ),
+  );
+
+  Future<void> _openBoatDetails(
+    Map<String, dynamic> boat,
+    Map<String, dynamic> data,
+  ) {
+    final boatNumber = '${boat['boatNumber'] ?? 'Không rõ'}';
+    final kg = _int(boat['totalKg']);
+    final trips = _int(boat['trips']);
+    final amount = _int(boat['totalAmount']);
+    final avgKg = trips == 0 ? 0 : kg ~/ trips;
+    final avgPrice = kg == 0 ? 0 : amount ~/ kg;
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => Scaffold(
+          backgroundColor: ReceiptUi.canvas(routeContext),
+          appBar: ReceiptUi.appBar(
+            routeContext,
+            boatNumber,
+            subtitle: _periodLabel(),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+            children: [
+              _boatCard(boat, _int(data['totalKg'])),
+              const SizedBox(height: 14),
+              ReceiptSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ReceiptSectionTitle('Chi tiết hoạt động'),
+                    const SizedBox(height: 10),
+                    _detailRow('Số chuyến', '$trips chuyến'),
+                    _detailRow(
+                      'Trung bình/chuyến',
+                      AppFormatters.formatKg(avgKg),
+                    ),
+                    if (avgPrice > 0)
+                      _detailRow(
+                        'Giá trung bình',
+                        AppFormatters.formatPricePerKg(avgPrice),
+                      ),
+                    if (amount > 0)
+                      _detailRow(
+                        'Tổng thành tiền',
+                        AppFormatters.formatFullCurrency(amount),
+                        strong: true,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value, {bool strong = false}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: ReceiptUi.secondaryText(context),
+                ),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: strong ? 18 : 16,
+                  fontWeight: FontWeight.w900,
+                  color: strong ? ReceiptColors.green : null,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Future<void> _showStatsSheet(String title, List<Widget> children) =>
       showModalBottomSheet<void>(
@@ -449,44 +451,6 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
           ),
         ),
       );
-
-  // ignore: unused_element
-  Widget _legacyContent() {
-    final data = _data ?? const <String, dynamic>{};
-    final boats = _boats(data);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-      children: [
-        if (_page == _StatsPage.overview) ...[
-          _summary(data),
-          const SizedBox(height: 14),
-          _comparison(data, _previousData ?? const {}),
-          const SizedBox(height: 14),
-          _operatingMetrics(data),
-          const SizedBox(height: 14),
-          _highlights(data, boats),
-          const SizedBox(height: 14),
-          _breakdown(data),
-        ] else if (_page == _StatsPage.boats) ...[
-          _boatHeader(boats, data),
-          const SizedBox(height: 12),
-          if (boats.isEmpty)
-            const ReceiptEmptyState(
-              icon: Icons.directions_boat_outlined,
-              title: 'Chưa có chuyến ghe',
-              message: 'Kỳ này chưa có phiếu nhập.',
-            )
-          else
-            ...boats.map(
-              (boat) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _boatCard(boat, _int(data['totalKg'])),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
 
   Widget _summary(Map<String, dynamic> data) {
     final trips = _int(data['trips']);
@@ -898,7 +862,11 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     ),
   );
 
-  Widget _boatCard(Map<String, dynamic> boat, int totalKg) {
+  Widget _boatCard(
+    Map<String, dynamic> boat,
+    int totalKg, {
+    VoidCallback? onTap,
+  }) {
     final kg = _int(boat['totalKg']);
     final trips = _int(boat['trips']);
     final amount = _int(boat['totalAmount']);
@@ -907,6 +875,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     final accent = isAg ? ReceiptColors.green : ReceiptColors.blue;
     final soft = isAg ? ReceiptColors.greenSoft : ReceiptColors.blueSoft;
     return ReceiptSurface(
+      onTap: onTap,
       borderColor: accent.withValues(alpha: 0.6),
       surfaceColor: soft,
       child: Column(
@@ -931,6 +900,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                   color: accent,
                 ),
               ),
+              if (onTap != null) ...[
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right_rounded, size: 28, color: accent),
+              ],
             ],
           ),
           const SizedBox(height: 8),
