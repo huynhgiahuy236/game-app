@@ -383,7 +383,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: valueColor ?? ReceiptColors.ink,
+            color: valueColor ?? ReceiptUi.ink(context),
           ),
         ),
       ),

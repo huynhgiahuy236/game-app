@@ -45,13 +45,18 @@ void main() {
     expect(find.text('Thứ Sáu, 11/07/2025'), findsOneWidget);
     expect(find.text('AG-26911'), findsWidgets);
     expect(find.text('80956'), findsOneWidget);
-    expect(find.text('80,956 tấn'), findsOneWidget);
-    expect(find.text('Máy đã đọc được gì?'), findsOneWidget);
+    expect(find.text('Xác nhận và lưu'), findsOneWidget);
+    await tester.tap(find.text('Xác nhận và lưu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Xác nhận thông tin phiếu'), findsOneWidget);
+    expect(find.text('Sửa lại'), findsOneWidget);
+    await tester.tap(find.text('Sửa lại'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
-    await tester.ensureVisible(find.text('Thứ Sáu, 11/07/2025'));
+    await tester.ensureVisible(find.text('Thứ Sáu, 11/07/2025').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Thứ Sáu, 11/07/2025'));
+    await tester.tap(find.text('Thứ Sáu, 11/07/2025').first);
     await tester.pumpAndSettle();
     expect(find.byType(DatePickerDialog), findsOneWidget);
     expect(tester.takeException(), isNull);

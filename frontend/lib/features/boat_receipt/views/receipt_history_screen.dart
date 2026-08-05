@@ -233,7 +233,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
             ),
             style: OutlinedButton.styleFrom(
               alignment: Alignment.centerLeft,
-              foregroundColor: ReceiptColors.ink,
+              foregroundColor: ReceiptUi.ink(context),
               side: BorderSide(color: ReceiptUi.line(context)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -812,10 +812,10 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                     const SizedBox(height: 2),
                     Text(
                       AppFormatters.formatKgToTons(receipt.weightKg),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
-                        color: ReceiptColors.ink,
+                        color: ReceiptUi.ink(context),
                       ),
                     ),
                   ],
@@ -901,7 +901,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w800,
-              color: valueColor ?? ReceiptColors.ink,
+              color: valueColor ?? ReceiptUi.ink(context),
             ),
           ),
         ),

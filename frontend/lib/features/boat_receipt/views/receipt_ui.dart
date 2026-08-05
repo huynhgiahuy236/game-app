@@ -35,6 +35,11 @@ abstract final class ReceiptUi {
       ? ReceiptColors.darkLine
       : ReceiptColors.line;
 
+  static Color ink(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? const Color(0xFFF5F0FF)
+      : ReceiptColors.ink;
+
   static Color secondaryText(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
       ? const Color(0xFFAFC0D4)
@@ -86,11 +91,19 @@ abstract final class ReceiptUi {
   }) {
     return InputDecoration(
       hintText: hint,
+      hintStyle: TextStyle(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF807A94)
+            : const Color(0xFF94A3B8),
+        fontSize: 17,
+        fontWeight: FontWeight.w400,
+        fontStyle: FontStyle.italic,
+      ),
       suffixText: suffix,
-      prefixIcon: icon == null ? null : Icon(icon, color: ReceiptColors.blue),
+      prefixIcon: icon == null ? null : Icon(icon, color: ReceiptColors.blue, size: 26),
       filled: true,
       fillColor: surface(context),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: line(context)),
@@ -106,6 +119,79 @@ abstract final class ReceiptUi {
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: ReceiptColors.red, width: 2),
+      ),
+    );
+  }
+
+  static void showTopSuccessAlert(
+    BuildContext context, {
+    required String title,
+    String? subtitle,
+  }) {
+    final mediaQuery = MediaQuery.of(context);
+    final topMargin = mediaQuery.padding.top + 12;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          top: topMargin,
+          left: 16,
+          right: 16,
+          bottom: mediaQuery.size.height - topMargin - 95,
+        ),
+        backgroundColor: const Color(0xFF047857),
+        elevation: 10,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xFF34D399), width: 1.5),
+        ),
+        duration: const Duration(seconds: 4),
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: Color(0xFF065F46),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF34D399),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                    ),
+                  ),
+                  if (subtitle != null && subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFFA7F3D0),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

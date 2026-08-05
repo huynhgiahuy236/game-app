@@ -8,6 +8,7 @@ import '../../../core/utils/formatters.dart';
 import '../services/boat_receipt_repository.dart';
 import '../services/ocr_service.dart';
 import 'receipt_image_viewer_screen.dart';
+import 'receipt_summary_review_screen.dart';
 import 'receipt_ui.dart';
 
 class ReceiptConfirmationScreen extends StatefulWidget {
@@ -61,8 +62,9 @@ class _ReceiptConfirmationScreenState
           ) ??
           DateTime.now();
     }
+    final initialBoat = widget.ocrResult?.extractedBoatNumber?.trim().toUpperCase();
     _boatController = TextEditingController(
-      text: widget.ocrResult?.extractedBoatNumber ?? '',
+      text: initialBoat == 'AG-26911' ? 'AG-26911' : 'DT-2764',
     );
     _weightController = TextEditingController(
       text: widget.ocrResult?.extractedWeightKg ?? '',
@@ -132,13 +134,13 @@ class _ReceiptConfirmationScreenState
         editedFields: _editedFields,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã lưu phiếu thành công'),
-          backgroundColor: ReceiptColors.green,
-        ),
+      final boatNum = _boatController.text.trim().toUpperCase();
+      ReceiptUi.showTopSuccessAlert(
+        context,
+        title: 'Lưu phiếu thành công!',
+        subtitle: 'Đã cập nhật vào sổ theo dõi ghe $boatNum',
       );
-      Navigator.pop(context, true);
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (error) {
       if (mounted) setState(() => _errorMessage = error.toString());
     } finally {
@@ -176,13 +178,9 @@ class _ReceiptConfirmationScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (_fromOcr) _reviewNotice(),
+                      if (_fromOcr && !_ocrFoundAnything) _reviewNotice(),
                       const SizedBox(height: 14),
                       _imageOrPlaceholderPreview(),
-                      if (_fromOcr) ...[
-                        const SizedBox(height: 14),
-                        _ocrDebugCard(),
-                      ],
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 14),
                         ReceiptErrorState(message: _errorMessage!),
@@ -331,99 +329,41 @@ class _ReceiptConfirmationScreenState
     );
   }
 
-  Widget _ocrDebugCard() => ReceiptSurface(
-    padding: EdgeInsets.zero,
-    child: ExpansionTile(
-      shape: const Border(),
-      collapsedShape: const Border(),
-      leading: const Icon(
-        Icons.manage_search_rounded,
-        color: ReceiptColors.blue,
-      ),
-      title: const Text(
-        'Máy đã đọc được gì?',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-      ),
-      subtitle: Text(
-        'Mở mục này khi kết quả nhận diện bị sai',
-        style: TextStyle(fontSize: 13, color: ReceiptUi.secondaryText(context)),
-      ),
-      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      children: [
-        _ocrValue('Ngày bóc được', widget.ocrResult?.extractedDate),
-        _ocrValue('Ghe dự đoán', widget.ocrResult?.extractedBoatNumber),
-        _ocrValue('Khối lượng bóc được', widget.ocrResult?.extractedWeightKg),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Văn bản OCR thô',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: ReceiptUi.secondaryText(context),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxHeight: 200),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: ReceiptUi.canvas(context),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: SingleChildScrollView(
-            child: SelectableText(
-              widget.ocrResult?.rawText.trim().isNotEmpty == true
-                  ? widget.ocrResult!.rawText
-                  : '(ML Kit không đọc được chữ nào từ ảnh)',
-              style: const TextStyle(fontSize: 14, height: 1.45),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+  Future<void> _navigateToReviewScreen() async {
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
 
-  Widget _ocrValue(String label, String? value) => Padding(
-    padding: const EdgeInsets.only(top: 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 15))),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            value?.isNotEmpty == true ? value! : '(không đọc được)',
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
+    final boatNumber = _boatController.text.trim().toUpperCase();
+    final weightKg = _weight;
+    final pricePerKg = _price;
+    final note = _noteController.text.trim();
+
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReceiptSummaryReviewScreen(
+          boatNumber: boatNumber,
+          date: _selectedDate,
+          weightKg: weightKg,
+          pricePerKg: pricePerKg,
+          note: note,
+          imageFile: widget.imageFile,
         ),
-      ],
-    ),
-  );
+      ),
+    );
+
+    if (result == true) {
+      _save();
+    }
+  }
 
   Widget _formCard() => ReceiptSurface(
+    padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Thông tin cần xác nhận',
-          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Ưu tiên dữ liệu viết tay trên phiếu.',
-          style: TextStyle(
-            fontSize: 14,
-            color: ReceiptUi.secondaryText(context),
-          ),
-        ),
-        const SizedBox(height: 18),
-        _label('Ngày cân vào', fromScan: _fromOcr),
-        const SizedBox(height: 8),
+        _label('Ngày cân vào'),
+        const SizedBox(height: 12),
         InkWell(
           onTap: _pickDate,
           borderRadius: BorderRadius.circular(14),
@@ -438,91 +378,39 @@ class _ReceiptConfirmationScreenState
                   child: Text(
                     AppFormatters.formatDate(_selectedDate),
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down_rounded),
+                const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 18),
-        _label('Số xe / Tên ghe (tàu)', fromScan: _fromOcr),
-        const SizedBox(height: 8),
-        // Bộ chọn nhanh giữa ghe DT-2764 và AG-26911
-        Row(
+        const SizedBox(height: 30),
+        _label('Số ghe'),
+        const SizedBox(height: 12),
+        Column(
           children: [
-            Expanded(child: _quickBoatChip('DT-2764')),
-            const SizedBox(width: 10),
-            Expanded(child: _quickBoatChip('AG-26911')),
+            _quickBoatChip('DT-2764'),
+            const SizedBox(height: 14),
+            _quickBoatChip('AG-26911'),
           ],
         ),
-        const SizedBox(height: 10),
-        TextFormField(
-          controller: _boatController,
-          textCapitalization: TextCapitalization.characters,
-          textInputAction: TextInputAction.next,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          decoration: ReceiptUi.input(
-            context,
-            icon: Icons.directions_boat_outlined,
-            hint: 'Chọn DT-2764 hoặc AG-26911',
-          ).copyWith(
-            suffixIcon: PopupMenuButton<String>(
-              tooltip: 'Chọn số ghe',
-              icon: const Icon(Icons.arrow_drop_down_rounded, size: 28),
-              onSelected: (value) {
-                _boatController.text = value;
-                _markEdited('boatNumber');
-                setState(() {});
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: 'DT-2764',
-                  child: Row(
-                    children: [
-                      BoatAvatarBadge(boatNumber: 'DT-2764', size: 30),
-                      SizedBox(width: 10),
-                      Text('DT-2764', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'AG-26911',
-                  child: Row(
-                    children: [
-                      BoatAvatarBadge(boatNumber: 'AG-26911', size: 30),
-                      SizedBox(width: 10),
-                      Text('AG-26911', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          onChanged: (_) => _markEdited('boatNumber'),
-          validator: (value) {
-            final boat = value?.trim().toUpperCase();
-            return boat == 'DT-2764' || boat == 'AG-26911'
-                ? null
-                : 'Hãy chọn DT-2764 hoặc AG-26911';
-          },
-        ),
-        const SizedBox(height: 18),
-        _label('Khối lượng', fromScan: _fromOcr),
-        const SizedBox(height: 8),
+        const SizedBox(height: 30),
+        _label('Khối lượng (kg)'),
+        const SizedBox(height: 12),
         TextFormField(
           controller: _weightController,
           keyboardType: TextInputType.number,
           textInputAction: TextInputAction.next,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
           decoration: ReceiptUi.input(
             context,
             icon: Icons.scale_outlined,
-            hint: 'Ví dụ: 80956',
+            hint: 'Nhập khối lượng kg...',
             suffix: 'kg',
           ),
           onChanged: (_) => _markEdited('weightKg'),
@@ -533,18 +421,19 @@ class _ReceiptConfirmationScreenState
                 : null;
           },
         ),
-        const SizedBox(height: 18),
-        _label('Đơn giá trấu'),
-        const SizedBox(height: 8),
+        const SizedBox(height: 30),
+        _label('Đơn giá trấu (đ/kg)'),
+        const SizedBox(height: 12),
         TextFormField(
           controller: _priceController,
           keyboardType: TextInputType.number,
           textInputAction: TextInputAction.done,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
           decoration: ReceiptUi.input(
             context,
             icon: Icons.payments_outlined,
+            hint: 'Nhập đơn giá đ/kg...',
             suffix: 'đ/kg',
           ),
           onChanged: (_) => _markEdited('pricePerKg'),
@@ -558,56 +447,74 @@ class _ReceiptConfirmationScreenState
 
   Widget _quickBoatChip(String boatName) {
     final selected = _boatController.text.trim().toUpperCase() == boatName;
-    return ChoiceChip(
-      showCheckmark: false,
-      avatar: BoatAvatarBadge(boatNumber: boatName, size: 26),
-      label: Text(
-        boatName,
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: 15,
-          color: selected ? Colors.white : ReceiptColors.ink,
+    final accentColor = boatName.contains('AG')
+        ? const Color(0xFF047857)
+        : const Color(0xFF4338CA);
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _boatController.text = boatName;
+          _markEdited('boatNumber');
+        });
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 62,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: selected ? accentColor : ReceiptUi.surface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? accentColor : ReceiptUi.line(context),
+            width: selected ? 2.5 : 1.2,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            BoatAvatarBadge(boatNumber: boatName, size: 36),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'Ghe $boatName',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 19,
+                  color: selected ? Colors.white : ReceiptUi.ink(context),
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 28,
+              )
+            else
+              Icon(
+                Icons.radio_button_unchecked_rounded,
+                color: ReceiptUi.secondaryText(context),
+                size: 26,
+              ),
+          ],
         ),
       ),
-      selected: selected,
-      selectedColor: boatName.contains('AG') ? const Color(0xFF047857) : const Color(0xFF4338CA),
-      backgroundColor: ReceiptUi.canvas(context),
-      onSelected: (isSelected) {
-        if (isSelected) {
-          setState(() {
-            _boatController.text = boatName;
-            _markEdited('boatNumber');
-          });
-        }
-      },
     );
   }
 
-  Widget _label(String text, {bool fromScan = false}) => Row(
-    children: [
-      Expanded(
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-      ),
-      if (fromScan)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: ReceiptColors.blueSoft,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'Từ ảnh',
-            style: TextStyle(
-              color: ReceiptColors.blue,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-    ],
+  Widget _label(String text, {bool fromScan = false}) => Text(
+    text,
+    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
   );
 
   Widget _summaryCard() {
@@ -710,7 +617,7 @@ class _ReceiptConfirmationScreenState
             child: SizedBox(
               height: 54,
               child: FilledButton.icon(
-                onPressed: _isLoading ? null : _save,
+                onPressed: _isLoading ? null : _navigateToReviewScreen,
                 style: FilledButton.styleFrom(
                   backgroundColor: ReceiptColors.green,
                   shape: RoundedRectangleBorder(

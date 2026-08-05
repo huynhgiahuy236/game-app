@@ -872,12 +872,11 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
     final amount = _int(boat['totalAmount']);
     final share = totalKg == 0 ? 0.0 : kg / totalKg;
     final isAg = '${boat['boatNumber'] ?? ''}'.toUpperCase().startsWith('AG');
-    final accent = isAg ? ReceiptColors.green : ReceiptColors.blue;
-    final soft = isAg ? ReceiptColors.greenSoft : ReceiptColors.blueSoft;
+    final accent = isAg ? ReceiptColors.green : ReceiptColors.blueStrong;
     return ReceiptSurface(
       onTap: onTap,
       borderColor: accent.withValues(alpha: 0.6),
-      surfaceColor: soft,
+      surfaceColor: ReceiptUi.surface(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -886,9 +885,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
               Expanded(
                 child: Text(
                   '${boat['boatNumber'] ?? 'Không rõ'}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
+                    color: accent,
                   ),
                 ),
               ),
@@ -929,7 +929,10 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
             children: [
               Text(
                 '${(share * 100).toStringAsFixed(1)}% tổng khối lượng',
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: ReceiptUi.secondaryText(context),
+                ),
               ),
               if (amount > 0)
                 Expanded(
@@ -938,7 +941,7 @@ class _ReceiptStatisticsScreenState extends State<ReceiptStatisticsScreen> {
                     textAlign: TextAlign.right,
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
                       color: ReceiptColors.green,
                     ),
                   ),
