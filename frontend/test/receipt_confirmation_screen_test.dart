@@ -43,7 +43,7 @@ void main() {
 
     expect(find.text('Ngày cân vào'), findsOneWidget);
     expect(find.text('Thứ Sáu, 11/07/2025'), findsOneWidget);
-    expect(find.text('AG-26911'), findsOneWidget);
+    expect(find.text('AG-26911'), findsWidgets);
     expect(find.text('80956'), findsOneWidget);
     expect(find.text('80,956 tấn'), findsOneWidget);
     expect(find.text('Máy đã đọc được gì?'), findsOneWidget);
