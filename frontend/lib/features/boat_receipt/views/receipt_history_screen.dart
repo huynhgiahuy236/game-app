@@ -793,7 +793,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               BoatAvatarBadge(boatNumber: receipt.boatNumber, size: 48),
               const SizedBox(width: 12),
@@ -802,20 +802,20 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'KHỐI LƯỢNG',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: ReceiptUi.secondaryText(context),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
                       AppFormatters.formatKgToTons(receipt.weightKg),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: ReceiptUi.ink(context),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      AppFormatters.formatDate(receipt.receiptDate),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: ReceiptUi.secondaryText(context),
                       ),
                     ),
                   ],
@@ -842,18 +842,12 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _infoRow(
-            'Ngày cân',
-            AppFormatters.formatDate(receipt.receiptDate),
-            fontSize: 18,
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
+          const SizedBox(height: 10),
+          FilledButton(
             onPressed: openDetails,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: boatColor,
-              side: BorderSide(color: boatColor),
+            style: FilledButton.styleFrom(
+              backgroundColor: boatColor,
+              foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
