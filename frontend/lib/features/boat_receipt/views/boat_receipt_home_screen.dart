@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/formatters.dart';
@@ -39,6 +40,51 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
   bool _usingCachedData = false;
   DateTime? _cacheSavedAt;
   String? _errorMessage;
+  bool _isDoubleBackWaiting = false;
+  Timer? _doubleBackTimer;
+  // 0=Tuần, 1=Tháng, 2=Năm
+  int _summaryPeriod = 0;
+  Map<String, dynamic>? _yearlySummary;
+
+  @override
+  void dispose() {
+    _doubleBackTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleBackPress() {
+    // Tab 0 (Trang chủ / Sổ ghe): cần nhấn 2 lần mới thoát
+    if (_currentNavIndex == 0) {
+      if (_isDoubleBackWaiting) {
+        _doubleBackTimer?.cancel();
+        Navigator.of(context).pop();
+        return;
+      }
+      _isDoubleBackWaiting = true;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nhấn lần nữa để thoát'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _doubleBackTimer?.cancel();
+      _doubleBackTimer = Timer(const Duration(milliseconds: 2000), () {
+        if (mounted) setState(() => _isDoubleBackWaiting = false);
+      });
+      return;
+    }
+    // Cc tab khác: back theo thứ tự bottom nav (Thống kê→Phếu→Trang chủ, Cài đặt→Trang chủ)
+    final previousIndex = switch (_currentNavIndex) {
+      1 => 0, // Phếu → Trang chủ
+      2 => 1, // Thống kê → Phếu
+      3 => 0, // Cài đặt → Trang chủ
+      _ => 0,
+    };
+    setState(() => _currentNavIndex = previousIndex);
+    if (previousIndex == 0) _loadData();
+  }
 
   @override
   void initState() {
@@ -62,15 +108,16 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
   }
 
   Future<void> _loadData({bool showSpinner = true}) async {
-    setState(() {
-      _isLoading = showSpinner;
-      _errorMessage = null;
-    });
+    if (showSpinner) setState(() => _isLoading = true);
+    setState(() => _errorMessage = null);
     try {
+      final now = DateTime.now();
+      final yearStr = '${now.year}';
       final results = await Future.wait([
         _repository.getHomeSummary(),
         _repository.getWeeklyStats(null),
         _repository.getReceipts(limit: 5, sortBy: 'createdAt'),
+        _repository.getYearlyStats(yearStr),
       ]);
       if (!mounted) return;
       setState(() {
@@ -78,6 +125,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
         _weeklySummary = results[1] as Map<String, dynamic>;
         _recentReceipts = [...results[2] as List<BoatReceiptModel>]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _yearlySummary = results[3] as Map<String, dynamic>;
         _usingCachedData = false;
       });
       await _cache.saveHome(
@@ -112,49 +160,56 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
         authRepository: widget.authRepository,
       ),
     ];
-    return Scaffold(
-      backgroundColor: ReceiptUi.canvas(context),
-      body: IndexedStack(index: _currentNavIndex, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentNavIndex,
-        height: 72,
-        backgroundColor: ReceiptUi.surface(context),
-        indicatorColor: ReceiptColors.blueSoft,
-        onDestinationSelected: (index) {
-          setState(() => _currentNavIndex = index);
-          if (index == 0) _loadData();
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: ReceiptColors.blue),
-            label: 'Trang chủ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(
-              Icons.receipt_long_rounded,
-              color: ReceiptColors.blue,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: Scaffold(
+        backgroundColor: ReceiptUi.canvas(context),
+        body: IndexedStack(index: _currentNavIndex, children: pages),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentNavIndex,
+          height: 72,
+          backgroundColor: ReceiptUi.surface(context),
+          indicatorColor: ReceiptColors.blueSoft,
+          onDestinationSelected: (index) {
+            setState(() => _currentNavIndex = index);
+            if (index == 0) _loadData();
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded, color: ReceiptColors.blue),
+              label: 'Trang chủ',
             ),
-            label: 'Phiếu',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(
-              Icons.bar_chart_rounded,
-              color: ReceiptColors.blue,
+            NavigationDestination(
+              icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(
+                Icons.receipt_long_rounded,
+                color: ReceiptColors.blue,
+              ),
+              label: 'Phiếu',
             ),
-            label: 'Thống kê',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(
-              Icons.settings_rounded,
-              color: ReceiptColors.blue,
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(
+                Icons.bar_chart_rounded,
+                color: ReceiptColors.blue,
+              ),
+              label: 'Thống kê',
             ),
-            label: 'Cài đặt',
-          ),
-        ],
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(
+                Icons.settings_rounded,
+                color: ReceiptColors.blue,
+              ),
+              label: 'Cài đặt',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -165,6 +220,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
       context,
       'Sổ ghe',
       subtitle: 'Quản lý nhập trấu mỗi ngày',
+      onBackPress: _handleBackPress,
     ),
     body: _isLoading
         ? const Center(
@@ -190,9 +246,9 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                 const SizedBox(height: 14),
                 _primaryAction(),
                 const SizedBox(height: 22),
-                const ReceiptSectionTitle('Tổng quan'),
+                _summaryHeader(),
                 const SizedBox(height: 10),
-                _summaryCards(),
+                _summaryCard(),
                 const SizedBox(height: 24),
                 ReceiptSectionTitle(
                   'Phiếu gần đây',
@@ -341,137 +397,172 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
     ),
   );
 
-  Widget _summaryCards() {
-    final now = DateTime.now();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cards = [
-          _metricCard(
-            'Tuần này',
-            '${(_weeklySummary?['trips'] as num?)?.toInt() ?? 0} chuyến',
-            (_weeklySummary?['totalKg'] as num?)?.toInt() ?? 0,
-            (_weeklySummary?['totalAmount'] as num?)?.toInt() ?? 0,
-            Icons.view_week_outlined,
-            0,
-          ),
-          _metricCard(
-            'Tháng ${AppFormatters.formatMonthYear(now)}',
-            '${_summary?.month.trips ?? 0} chuyến',
-            _summary?.month.weightKg ?? 0,
-            _summary?.month.totalAmount ?? 0,
-            Icons.calendar_month_outlined,
-            1,
-          ),
-        ];
-        if (constraints.maxWidth < 520) {
-          return Column(
-            children: [cards[0], const SizedBox(height: 10), cards[1]],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[1]),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _metricCard(
-    String title,
-    String trips,
-    int kg,
-    int amount,
-    IconData icon,
-    int tab,
-  ) => ReceiptSurface(
-    onTap: () => setState(() {
-      _statsInitialTab = tab;
-      _currentNavIndex = 2;
-    }),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(9),
+  Widget _summaryHeader() => Row(
+    children: [
+      const Expanded(
+        child: Text(
+          'Tổng quan',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+      ),
+      ...[['Tuần', 0], ['Tháng', 1], ['Năm', 2]].map((item) {
+        final label = item[0] as String;
+        final idx = item[1] as int;
+        final selected = _summaryPeriod == idx;
+        return Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: GestureDetector(
+            onTap: () => setState(() => _summaryPeriod = idx),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: ReceiptColors.blueSoft,
-                borderRadius: BorderRadius.circular(10),
+                color: selected
+                    ? ReceiptColors.blueStrong
+                    : ReceiptColors.blueSoft,
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(icon, color: ReceiptColors.blue),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
               child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 17,
+                label,
+                style: TextStyle(
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
+                  color: selected ? Colors.white : ReceiptColors.blueStrong,
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-              decoration: BoxDecoration(
-                color: ReceiptColors.blueSoft,
-                borderRadius: BorderRadius.circular(9),
+          ),
+        );
+      }),
+    ],
+  );
+
+  Widget _summaryCard() {
+    final now = DateTime.now();
+    final int trips;
+    final int kg;
+    final int amount;
+    final String periodLabel;
+    final IconData icon;
+    final int statsTab;
+
+    switch (_summaryPeriod) {
+      case 0: // Tuần
+        trips = (_weeklySummary?['trips'] as num?)?.toInt() ?? 0;
+        kg = (_weeklySummary?['totalKg'] as num?)?.toInt() ?? 0;
+        amount = (_weeklySummary?['totalAmount'] as num?)?.toInt() ?? 0;
+        periodLabel = 'Tuần này';
+        icon = Icons.view_week_outlined;
+        statsTab = 0;
+      case 1: // Tháng
+        trips = _summary?.month.trips ?? 0;
+        kg = _summary?.month.weightKg ?? 0;
+        amount = _summary?.month.totalAmount ?? 0;
+        periodLabel = 'Tháng ${AppFormatters.formatMonthYear(now)}';
+        icon = Icons.calendar_month_outlined;
+        statsTab = 1;
+      case 2: // Năm
+        trips = (_yearlySummary?['trips'] as num?)?.toInt() ?? 0;
+        kg = (_yearlySummary?['totalKg'] as num?)?.toInt() ?? 0;
+        amount = (_yearlySummary?['totalAmount'] as num?)?.toInt() ?? 0;
+        periodLabel = 'Năm ${now.year}';
+        icon = Icons.calendar_today_outlined;
+        statsTab = 2;
+      default:
+        trips = 0; kg = 0; amount = 0;
+        periodLabel = '';
+        icon = Icons.bar_chart_outlined;
+        statsTab = 0;
+    }
+
+    return ReceiptSurface(
+      onTap: () => setState(() {
+        _statsInitialTab = statsTab;
+        _currentNavIndex = 2;
+      }),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: ReceiptColors.blueSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: ReceiptColors.blue),
               ),
-              child: Text(
-                trips,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  periodLabel,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: ReceiptColors.blueSoft,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  '$trips chuyến',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: ReceiptColors.blueStrong,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            AppFormatters.formatKgToTons(kg),
+            style: const TextStyle(
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+              color: ReceiptColors.blueStrong,
+            ),
+          ),
+          if (amount > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              AppFormatters.formatCurrency(amount),
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: ReceiptColors.green,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                'Xem thống kê',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
                   color: ReceiptColors.blueStrong,
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Text(
-          AppFormatters.formatKgToTons(kg),
-          style: const TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.w900,
-            color: ReceiptColors.blueStrong,
-          ),
-        ),
-        const SizedBox(height: 4),
-        if (amount > 0) ...[
-          const SizedBox(height: 6),
-          Text(
-            AppFormatters.formatCurrency(amount),
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: ReceiptColors.green,
-            ),
-          ),
-        ],
-        const SizedBox(height: 10),
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              'Xem thống kê',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+              SizedBox(width: 2),
+              Icon(
+                Icons.chevron_right_rounded,
                 color: ReceiptColors.blueStrong,
               ),
-            ),
-            SizedBox(width: 2),
-            Icon(Icons.chevron_right_rounded, color: ReceiptColors.blueStrong),
-          ],
-        ),
-      ],
-    ),
-  );
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _receiptCard(BoatReceiptModel receipt) {
     final isAg = receipt.boatNumber.toUpperCase().contains('AG');

@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 
 abstract final class ReceiptColors {
-  // Lavender palette inspired by the reference UI. Existing names are kept so
-  // every receipt screen picks up the new identity consistently.
-  static const blue = Color(0xFF7C5CC4);
-  static const blueStrong = Color(0xFF6542B5);
-  static const blueSoft = Color(0xFFE9E0FF);
+  // Blue ocean palette – clean, modern, professional.
+  static const blue = Color(0xFF1D6FC4);
+  static const blueStrong = Color(0xFF1558A8);
+  static const blueSoft = Color(0xFFD6E8FF);
   static const green = Color(0xFF047857);
   static const greenSoft = Color(0xFFBBF7D0);
   static const amber = Color(0xFFB45309);
   static const red = Color(0xFFB91C1C);
-  static const ink = Color(0xFF252033);
-  static const muted = Color(0xFF716A7F);
-  static const canvas = Color(0xFFF5F0FF);
-  static const line = Color(0xFFE3D8F7);
-  static const darkCanvas = Color(0xFF171222);
-  static const darkSurface = Color(0xFF241D32);
-  static const darkLine = Color(0xFF493B62);
+  static const ink = Color(0xFF1A2635);
+  static const muted = Color(0xFF5A6A82);
+  static const canvas = Color(0xFFF0F6FF);
+  static const line = Color(0xFFD3E5F7);
+  static const darkCanvas = Color(0xFF101820);
+  static const darkSurface = Color(0xFF172030);
+  static const darkLine = Color(0xFF2C4060);
 }
 
 abstract final class ReceiptUi {
@@ -50,12 +49,19 @@ abstract final class ReceiptUi {
     String title, {
     String? subtitle,
     List<Widget>? actions,
+    VoidCallback? onBackPress,
   }) {
     return AppBar(
       backgroundColor: canvas(context),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      titleSpacing: Navigator.canPop(context) ? 0 : 20,
+      leading: (onBackPress != null || Navigator.canPop(context))
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: onBackPress ?? () => Navigator.maybePop(context),
+            )
+          : null,
+      titleSpacing: (onBackPress != null || Navigator.canPop(context)) ? 0 : 20,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

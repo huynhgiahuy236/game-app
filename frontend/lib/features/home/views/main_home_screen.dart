@@ -447,11 +447,6 @@ class _TopBar extends StatelessWidget {
             ],
           ),
         ),
-        IconButton.filledTonal(
-          tooltip: 'Đăng xuất',
-          onPressed: onLogout,
-          icon: const Icon(Icons.logout_rounded),
-        ),
       ],
     );
   }
@@ -522,7 +517,7 @@ class _Hero extends StatelessWidget {
               ),
               const SizedBox(height: 26),
               Text(
-                'Xin chào, $displayName',
+                'Xin chào, Chị Mười',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
