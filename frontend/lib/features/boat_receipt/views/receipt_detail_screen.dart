@@ -197,6 +197,14 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                       ),
                       _divider(),
                       _row(
+                        'Trạng thái',
+                        _receipt!.wasEdited ? 'Đã chỉnh sửa' : 'Phiếu gốc',
+                        valueColor: _receipt!.wasEdited
+                            ? const Color(0xFFF59E0B)
+                            : ReceiptColors.blue,
+                      ),
+                      _divider(),
+                      _row(
                         'Ghi chú',
                         _receipt!.note.isEmpty ? 'Không có' : _receipt!.note,
                       ),
@@ -355,7 +363,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         ],
       );
 
-  Widget _row(String label, String value) => Row(
+  Widget _row(String label, String value, {Color? valueColor}) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Expanded(
@@ -372,7 +380,11 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         child: Text(
           value,
           textAlign: TextAlign.right,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: valueColor ?? ReceiptColors.ink,
+          ),
         ),
       ),
     ],

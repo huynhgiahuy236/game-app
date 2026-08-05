@@ -683,8 +683,10 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              BoatAvatarBadge(boatNumber: receipt.boatNumber, size: 48),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,6 +699,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
                         color: ReceiptUi.secondaryText(context),
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       AppFormatters.formatKgToTons(receipt.weightKg),
                       style: const TextStyle(
@@ -710,49 +713,40 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 8,
+                  horizontal: 12,
+                  vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: statusBackground,
-                  borderRadius: BorderRadius.circular(9),
+                  color: isAg ? ReceiptColors.greenSoft : ReceiptColors.blueSoft,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: boatColor.withValues(alpha: 0.3)),
                 ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: statusColor,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BoatAvatarBadge(boatNumber: receipt.boatNumber, size: 20),
+                    const SizedBox(width: 6),
+                    Text(
+                      receipt.boatNumber,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: boatColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _infoRow('Số ghe', receipt.boatNumber, valueColor: boatColor),
           _infoRow('Ngày cân', AppFormatters.formatDate(receipt.receiptDate)),
-          _infoRow(
-            'Đơn giá',
-            receipt.pricePerKg > 0
-                ? AppFormatters.formatPricePerKg(receipt.pricePerKg)
-                : 'Chưa nhập',
-          ),
-          _infoRow(
-            'Thành tiền',
-            receipt.computedTotalAmount > 0
-                ? AppFormatters.formatFullCurrency(receipt.computedTotalAmount)
-                : 'Chưa có',
-            valueColor: receipt.computedTotalAmount > 0
-                ? ReceiptColors.green
-                : null,
-          ),
-          if (receipt.note.isNotEmpty) ...[_infoRow('Ghi chú', receipt.note)],
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: openDetails,
             style: OutlinedButton.styleFrom(
-              foregroundColor: ReceiptColors.blueStrong,
-              side: const BorderSide(color: ReceiptColors.blue),
+              foregroundColor: boatColor,
+              side: BorderSide(color: boatColor),
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -768,7 +762,12 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value, {Color? valueColor}) => Padding(
+  Widget _infoRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    Widget? leadingValue,
+  }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 9),
     child: Row(
       children: [
@@ -781,6 +780,10 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
             ),
           ),
         ),
+        if (leadingValue != null) ...[
+          leadingValue,
+          const SizedBox(width: 8),
+        ],
         Flexible(
           child: Text(
             value,

@@ -258,24 +258,25 @@ class ReceiptErrorState extends StatelessWidget {
   );
 }
 
-/// Badge Icon hiển thị hình ảnh đại diện giả lập cho ghe DT-2764 hoặc AG-26911
+/// Badge Icon / Thumbnail đại diện cho ghe DT-2764 hoặc AG-26911
 class BoatAvatarBadge extends StatelessWidget {
   const BoatAvatarBadge({
     super.key,
     required this.boatNumber,
     this.size = 48,
-    this.showLabel = false,
+    this.useAssetImage = true,
   });
 
   final String boatNumber;
   final double size;
-  final bool showLabel;
+  final bool useAssetImage;
 
   bool get isAG => boatNumber.toUpperCase().contains('AG');
 
   @override
   Widget build(BuildContext context) {
     final isAgBoat = isAG;
+    final assetPath = isAgBoat ? 'assets/logo.jpg' : 'assets/image.png';
     final primaryColor = isAgBoat ? const Color(0xFF047857) : const Color(0xFF4338CA);
     final gradientColors = isAgBoat
         ? [const Color(0xFF059669), const Color(0xFF047857)]
@@ -283,9 +284,10 @@ class BoatAvatarBadge extends StatelessWidget {
     final iconData = isAgBoat ? Icons.sailing_rounded : Icons.directions_boat_filled_rounded;
 
     return Container(
-      padding: EdgeInsets.all(size * 0.15),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.circular(size * 0.28),
         gradient: LinearGradient(
           colors: gradientColors,
           begin: Alignment.topLeft,
@@ -294,28 +296,43 @@ class BoatAvatarBadge extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: primaryColor.withValues(alpha: 0.25),
-            blurRadius: size * 0.25,
+            blurRadius: size * 0.2,
             offset: Offset(0, size * 0.08),
           ),
         ],
       ),
-      child: Center(
-        child: Icon(
-          iconData,
-          color: Colors.white,
-          size: size * 0.55,
-        ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.28),
+        child: useAssetImage
+            ? Image.asset(
+                assetPath,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Icon(
+                    iconData,
+                    color: Colors.white,
+                    size: size * 0.55,
+                  ),
+                ),
+              )
+            : Center(
+                child: Icon(
+                  iconData,
+                  color: Colors.white,
+                  size: size * 0.55,
+                ),
+              ),
       ),
     );
   }
 }
 
-/// Thẻ hình ảnh giả lập đại diện cho phiếu ghe khi chưa/không có ảnh chụp gốc
+/// Thẻ hình ảnh đại diện cho ghe DT-2764 (image.png) hoặc AG-26911 (logo.jpg)
 class BoatImagePlaceholder extends StatelessWidget {
   const BoatImagePlaceholder({
     super.key,
     required this.boatNumber,
-    this.height = 140,
+    this.height = 150,
     this.onTap,
   });
 
@@ -326,80 +343,77 @@ class BoatImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAG = boatNumber.toUpperCase().contains('AG');
-    final startColor = isAG ? const Color(0xFF065F46) : const Color(0xFF312E81);
-    final endColor = isAG ? const Color(0xFF047857) : const Color(0xFF4338CA);
+    final assetPath = isAG ? 'assets/logo.jpg' : 'assets/image.png';
+    final boatLabel = isAG ? 'AG-26911' : 'DT-2764';
     final iconData = isAG ? Icons.sailing_rounded : Icons.directions_boat_filled_rounded;
-    final labelText = isAG ? 'Ghe AG-26911 (Icon giả lập)' : 'Ghe DT-2764 (Icon giả lập)';
+    final tagColor = isAG ? const Color(0xFF047857) : const Color(0xFF4338CA);
 
     final content = Container(
       height: height,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [startColor, endColor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         boxShadow: [
           BoxShadow(
-            color: endColor.withValues(alpha: 0.3),
+            color: tagColor.withValues(alpha: 0.25),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -10,
-            bottom: -15,
-            child: Icon(
-              iconData,
-              size: height * 0.85,
-              color: Colors.white.withValues(alpha: 0.12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              assetPath,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: tagColor,
+                child: Center(
+                  child: Icon(iconData, size: 64, color: Colors.white38),
+                ),
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.transparent, Color(0xDD000000)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
+                      color: tagColor,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Icon(iconData, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        Icon(iconData, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
                         Text(
-                          boatNumber.isNotEmpty ? boatNumber : 'Ghe chưa chọn',
+                          boatNumber.isNotEmpty ? boatNumber : boatLabel,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          labelText,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const Spacer(),
                   if (onTap != null)
                     const Icon(
                       Icons.open_in_full_rounded,
@@ -408,9 +422,9 @@ class BoatImagePlaceholder extends StatelessWidget {
                     ),
                 ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
 

@@ -474,8 +474,11 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
   );
 
   Widget _receiptCard(BoatReceiptModel receipt) {
+    final isAg = receipt.boatNumber.toUpperCase().contains('AG');
+    final boatColor = isAg ? ReceiptColors.green : ReceiptColors.blueStrong;
+
     return ReceiptSurface(
-      borderColor: ReceiptColors.line,
+      borderColor: boatColor.withValues(alpha: 0.5),
       surfaceColor: ReceiptUi.surface(context),
       onTap: () async {
         final updated = await Navigator.push<bool>(
@@ -488,18 +491,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
       },
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: ReceiptColors.blueSoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.directions_boat_outlined,
-              color: ReceiptColors.blueStrong,
-            ),
-          ),
+          BoatAvatarBadge(boatNumber: receipt.boatNumber, size: 48),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -507,9 +499,10 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
               children: [
                 Text(
                   receipt.boatNumber,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
+                    color: boatColor,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -529,10 +522,10 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
             children: [
               Text(
                 AppFormatters.formatKgToTons(receipt.weightKg),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: ReceiptColors.blueStrong,
+                  color: boatColor,
                 ),
               ),
               const SizedBox(height: 4),
@@ -549,7 +542,7 @@ class _BoatReceiptHomeScreenState extends State<BoatReceiptHomeScreen> {
                 const Icon(
                   Icons.chevron_right_rounded,
                   size: 22,
-                  color: ReceiptColors.blueStrong,
+                  color: ReceiptColors.muted,
                 ),
             ],
           ),

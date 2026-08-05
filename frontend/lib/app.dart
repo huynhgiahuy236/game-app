@@ -43,58 +43,72 @@ class _GameAppState extends State<GameApp> {
 
         if (authRepository.isLoading) {
           homeWidget = Scaffold(
-            backgroundColor: const Color(0xFF1E1435),
-            body: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF7C5CC4).withValues(alpha: 0.4),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(32),
-                        child: Image.asset(
-                          'assets/splat.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const AppLogo(size: 140, radius: 32),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    const SizedBox(
-                      width: 180,
-                      child: LinearProgressIndicator(
-                        color: Color(0xFF7C5CC4),
-                        backgroundColor: Color(0xFF382A5C),
-                        minHeight: 6,
-                        borderRadius: BorderRadius.all(Radius.circular(10)),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'ĐANG TẢI ỨNG DỤNG CHỊ MƯỜI...',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
+            backgroundColor: const Color(0xFF0F091F),
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/splat.png',
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFF1E1435),
+                    child: const Center(child: AppLogo(size: 140, radius: 32)),
+                  ),
                 ),
-              ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 180,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 24,
+                  right: 24,
+                  bottom: 36,
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'ĐANG TẢI ỨNG DỤNG CHỊ MƯỜI...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 1.2,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: Colors.black),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: const LinearProgressIndicator(
+                            color: Color(0xFF9066FF),
+                            backgroundColor: Color(0x66FFFFFF),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         } else {
