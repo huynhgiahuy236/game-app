@@ -209,7 +209,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
           width: double.infinity,
           height: 58,
           child: OutlinedButton.icon(
-            onPressed: _showFilters,
+            onPressed: _showFilterBottomSheet,
             icon: const Icon(Icons.tune_rounded, size: 26),
             label: Align(
               alignment: Alignment.centerLeft,
@@ -306,159 +306,269 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     return '$boat · $time';
   }
 
-  Future<void> _showFilters() async {
+  Future<void> _showFilterBottomSheet() async {
     final result = await showModalBottomSheet<bool>(
       context: context,
-      useSafeArea: true,
       isScrollControlled: true,
+      backgroundColor: ReceiptUi.surface(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: ReceiptUi.line(context),
-                  borderRadius: BorderRadius.circular(8),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(context).padding.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: ReceiptColors.line,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Lọc danh sách phiếu',
-              style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Chọn ghe',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _sheetChoice(
-                    sheetContext,
-                    'Tất cả',
-                    _selectedBoat == null,
-                    () => setState(() => _selectedBoat = null),
-                  ),
+              const SizedBox(height: 18),
+              const Text(
+                'Lọc danh sách phiếu',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: ReceiptColors.ink,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _sheetChoice(
-                    sheetContext,
-                    'DT-2764',
-                    _selectedBoat == 'DT-2764',
-                    () => setState(() => _selectedBoat = 'DT-2764'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _sheetChoice(
-                    sheetContext,
-                    'AG-26911',
-                    _selectedBoat == 'AG-26911',
-                    () => setState(() => _selectedBoat = 'AG-26911'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Thời gian',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _sheetTime(sheetContext, 'Tất cả', 'all'),
-                _sheetTime(sheetContext, 'Hôm nay', 'today'),
-                _sheetTime(sheetContext, 'Tuần này', 'week'),
-                _sheetTime(sheetContext, 'Tháng này', 'month'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () async {
-                Navigator.pop(sheetContext);
-                await _pickDate();
-              },
-              icon: const Icon(Icons.calendar_today_outlined),
-              label: Text(
-                _selectedDate == null
-                    ? 'Chọn ngày cụ thể'
-                    : AppFormatters.formatDate(_selectedDate!),
-                style: const TextStyle(
-                  fontSize: 17,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Theo ghe',
+                style: TextStyle(
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
+                  color: ReceiptUi.secondaryText(context),
                 ),
               ),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(54),
-                alignment: Alignment.centerLeft,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _sheetBoatOption(
+                      'Tất cả',
+                      _selectedBoat == null,
+                      ReceiptColors.blueStrong,
+                      ReceiptColors.blueSoft,
+                      () => setSheetState(() => _selectedBoat = null),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _sheetBoatOption(
+                      'DT-2764',
+                      _selectedBoat == 'DT-2764',
+                      ReceiptColors.blueStrong,
+                      ReceiptColors.blueSoft,
+                      () => setSheetState(() => _selectedBoat = 'DT-2764'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _sheetBoatOption(
+                      'AG-26911',
+                      _selectedBoat == 'AG-26911',
+                      ReceiptColors.green,
+                      ReceiptColors.greenSoft,
+                      () => setSheetState(() => _selectedBoat = 'AG-26911'),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: () => Navigator.pop(sheetContext, true),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(56),
-                backgroundColor: ReceiptColors.blueStrong,
+              const SizedBox(height: 20),
+              Text(
+                'Theo thời gian',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: ReceiptUi.secondaryText(context),
+                ),
               ),
-              child: const Text(
-                'Xem kết quả',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _sheetTimeChip('Tất cả', 'all', setSheetState),
+                  _sheetTimeChip('Hôm nay', 'today', setSheetState),
+                  _sheetTimeChip('Tuần này', 'week', setSheetState),
+                  _sheetTimeChip('Tháng này', 'month', setSheetState),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    helpText: 'CHỌN NGÀY CÂN',
+                  );
+                  if (picked != null) {
+                    setSheetState(() {
+                      _selectedDate = picked;
+                      _filterType = 'date';
+                    });
+                  }
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 13,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _filterType == 'date'
+                        ? ReceiptColors.blueSoft
+                        : ReceiptUi.surface(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _filterType == 'date'
+                          ? ReceiptColors.blue
+                          : ReceiptColors.line,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 20,
+                        color: _filterType == 'date'
+                            ? ReceiptColors.blueStrong
+                            : ReceiptUi.secondaryText(context),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _selectedDate == null
+                            ? 'Chọn ngày cụ thể...'
+                            : AppFormatters.formatDate(_selectedDate!),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: _filterType == 'date'
+                              ? ReceiptColors.blueStrong
+                              : ReceiptColors.ink,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_selectedDate != null && _filterType == 'date')
+                        GestureDetector(
+                          onTap: () => setSheetState(() {
+                            _selectedDate = null;
+                            _filterType = 'all';
+                          }),
+                          child: const Icon(
+                            Icons.cancel_rounded,
+                            size: 18,
+                            color: ReceiptColors.muted,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {
+                  setState(() {});
+                  Navigator.pop(sheetContext, true);
+                },
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  backgroundColor: ReceiptColors.blueStrong,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Xem kết quả',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
     if (result == true) _fetchHistory();
   }
 
-  Widget _sheetChoice(
-    BuildContext sheetContext,
+  Widget _sheetBoatOption(
     String label,
     bool selected,
-    VoidCallback select,
-  ) => OutlinedButton(
-    onPressed: () {
-      select();
-      Navigator.pop(sheetContext, true);
-    },
-    style: OutlinedButton.styleFrom(
-      minimumSize: const Size.fromHeight(52),
-      backgroundColor: selected ? ReceiptColors.blueSoft : null,
+    Color activeColor,
+    Color activeBg,
+    VoidCallback onTap,
+  ) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Container(
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected ? activeBg : ReceiptUi.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected ? activeColor : ReceiptColors.line,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: selected ? activeColor : ReceiptColors.ink,
+        ),
+      ),
     ),
-    child: Text(label, maxLines: 1),
   );
 
-  Widget _sheetTime(BuildContext sheetContext, String label, String value) =>
-      ChoiceChip(
-        label: Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        selected: _filterType == value,
-        onSelected: (_) {
-          setState(() {
-            _filterType = value;
-            _selectedDate = null;
-          });
-          Navigator.pop(sheetContext, true);
-        },
-      );
+  Widget _sheetTimeChip(
+    String label,
+    String value,
+    StateSetter setSheetState,
+  ) => ChoiceChip(
+    label: Text(
+      label,
+      style: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w800,
+        color: _filterType == value
+            ? ReceiptColors.blueStrong
+            : ReceiptColors.ink,
+      ),
+    ),
+    selected: _filterType == value,
+    selectedColor: ReceiptColors.blueSoft,
+    backgroundColor: ReceiptUi.surface(context),
+    showCheckmark: false,
+    side: BorderSide(
+      color: _filterType == value
+          ? ReceiptColors.blue
+          : ReceiptColors.line,
+    ),
+    onSelected: (_) {
+      setSheetState(() {
+        _filterType = value;
+        _selectedDate = null;
+      });
+    },
+  );
 
   // Kept as a private layout reference while the compact filter is in use.
   // ignore: unused_element
@@ -713,34 +823,31 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+                  horizontal: 14,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: isAg ? ReceiptColors.greenSoft : ReceiptColors.blueSoft,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: boatColor.withValues(alpha: 0.3)),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    BoatAvatarBadge(boatNumber: receipt.boatNumber, size: 20),
-                    const SizedBox(width: 6),
-                    Text(
-                      receipt.boatNumber,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: boatColor,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  receipt.boatNumber,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: boatColor,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _infoRow('Ngày cân', AppFormatters.formatDate(receipt.receiptDate)),
+          _infoRow(
+            'Ngày cân',
+            AppFormatters.formatDate(receipt.receiptDate),
+            fontSize: 18,
+          ),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: openDetails,
@@ -767,6 +874,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     String value, {
     Color? valueColor,
     Widget? leadingValue,
+    double fontSize = 17,
   }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 9),
     child: Row(
@@ -791,7 +899,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: fontSize,
               fontWeight: FontWeight.w800,
               color: valueColor ?? ReceiptColors.ink,
             ),

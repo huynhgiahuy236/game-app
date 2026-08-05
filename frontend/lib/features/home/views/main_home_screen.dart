@@ -735,11 +735,7 @@ class _GameCard extends StatelessWidget {
     onTap: onTap,
     footer: const Row(
       children: [
-        _GameChip(icon: Icons.grid_4x4_rounded),
-        SizedBox(width: 6),
-        _GameChip(icon: Icons.calculate_rounded),
-        SizedBox(width: 6),
-        _GameChip(icon: Icons.close_rounded),
+        _DotLabel(color: Color(0xFFF0ABFC), label: '6 trò chơi sẵn sàng'),
         Spacer(),
         Icon(Icons.arrow_outward_rounded, color: Colors.white),
       ],
@@ -752,7 +748,6 @@ class _ModuleCard extends StatelessWidget {
     required this.minHeight,
     required this.title,
     required this.subtitle,
-    required this.eyebrow,
     required this.icon,
     required this.accent,
     required this.gradient,
@@ -760,6 +755,7 @@ class _ModuleCard extends StatelessWidget {
     required this.onPin,
     required this.onTap,
     required this.footer,
+    this.eyebrow = '',
   });
   final double minHeight;
   final String title;
@@ -799,7 +795,6 @@ class _ModuleCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -835,75 +830,34 @@ class _ModuleCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: BorderRadius.circular(99),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accent.withValues(alpha: .28),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF171122),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: .25),
-                                blurRadius: 4,
-                              ),
-                            ],
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(width: 7),
+                        const SizedBox(height: 8),
                         Text(
-                          eyebrow,
+                          subtitle,
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: const Color(0xFF171122),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.4,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 27,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -.7,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: .74),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(height: 20),
                   footer,
                 ],
               ),
